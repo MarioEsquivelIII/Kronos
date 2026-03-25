@@ -77,3 +77,10 @@ KRONOS/
 ├── package.json
 ├── tailwind.config.ts
 └── tsconfig.json
+
+Validation and Reliability AI responses are validated before being saved or rendered. 
+This helps ensure: correct JSON structure valid times required fields are present safer rendering in the UI 
+
+Future Improvements Google Calendar integration smarter conflict resolution recurring habit templates reminders and notifications mobile optimization schedule analytics multi-calendar support Security Notes Do not commit .env Keep API keys private Use Supabase row-level security to protect user data License This project is for educational and prototype purposes unless otherwise specified. 
+
+Author Built by Mario A. Esquivel III.
