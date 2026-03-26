@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { CalendarEvent, getEventsForDate, formatTime, getDayName, getDayNumber, getMonthName, isToday, generateId } from "@/lib/events";
 
 type CalendarViewMode = "day" | "week" | "month";
@@ -12,25 +12,21 @@ interface WeekCalendarProps {
   onClickEvent: (event: CalendarEvent, x: number, y: number) => void;
 }
 
-const colorMap: Record<string, string> = {
-  green: "bg-[#5a8a4a]/85 border-[#5a8a4a]",
-  blue: "bg-[#4a7a8a]/85 border-[#4a7a8a]",
-  orange: "bg-[#8a7040]/85 border-[#8a7040]",
-  red: "bg-[#8a4a4a]/85 border-[#8a4a4a]",
-  purple: "bg-[#7a5a8a]/85 border-[#7a5a8a]",
-  gray: "bg-[#6a6a6a]/85 border-[#6a6a6a]",
+const EVENT_STYLES: Record<string, { bg: string; border: string; text: string }> = {
+  green:  { bg: "var(--ev-green-bg)",  border: "var(--ev-green-border)",  text: "var(--ev-green-text)" },
+  blue:   { bg: "var(--ev-blue-bg)",   border: "var(--ev-blue-border)",   text: "var(--ev-blue-text)" },
+  orange: { bg: "var(--ev-orange-bg)", border: "var(--ev-orange-border)", text: "var(--ev-orange-text)" },
+  red:    { bg: "var(--ev-red-bg)",    border: "var(--ev-red-border)",    text: "var(--ev-red-text)" },
+  purple: { bg: "var(--ev-purple-bg)", border: "var(--ev-purple-border)", text: "var(--ev-purple-text)" },
+  gray:   { bg: "var(--ev-gray-bg)",   border: "var(--ev-gray-border)",   text: "var(--ev-gray-text)" },
 };
 
 const dotColorMap: Record<string, string> = {
-  green: "#5a8a4a",
-  blue: "#4a7a8a",
-  orange: "#8a7040",
-  red: "#8a4a4a",
-  purple: "#7a5a8a",
-  gray: "#6a6a6a",
+  green: "var(--ev-green-border)", blue: "var(--ev-blue-border)", orange: "var(--ev-orange-border)",
+  red: "var(--ev-red-border)", purple: "var(--ev-purple-border)", gray: "var(--ev-gray-border)",
 };
 
-const HOUR_HEIGHT = 56;
+const HOUR_HEIGHT = 60;
 
 function getMonthGridDates(year: number, month: number): string[] {
   const firstDay = new Date(year, month, 1);
@@ -59,15 +55,9 @@ function getDatesForView(viewMode: CalendarViewMode, numDays: number, offset: nu
     }
     return dates;
   }
-
   const today = new Date();
   today.setDate(today.getDate() + offset);
-
-  if (viewMode === "day") {
-    return [today.toISOString().split("T")[0]];
-  }
-
-  // week
+  if (viewMode === "day") return [today.toISOString().split("T")[0]];
   const dayOfWeek = today.getDay();
   const dates: string[] = [];
   for (let i = 0; i < numDays; i++) {
@@ -78,22 +68,27 @@ function getDatesForView(viewMode: CalendarViewMode, numDays: number, offset: nu
   return dates;
 }
 
+function useCurrentTime() {
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(interval);
+  }, []);
+  return now;
+}
+
 export default function WeekCalendar({ events, onContextMenu, onAddEvent, onClickEvent }: WeekCalendarProps) {
   const [viewMode, setViewMode] = useState<CalendarViewMode>("week");
   const [numDays, setNumDays] = useState(7);
   const [weekOffset, setWeekOffset] = useState(0);
   const [showViewMenu, setShowViewMenu] = useState(false);
-  const [showDaysMenu, setShowDaysMenu] = useState(false);
-  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [showWeekends, setShowWeekends] = useState(true);
-  const [showDeclinedEvents, setShowDeclinedEvents] = useState(true);
-  const [syncing, setSyncing] = useState(false);
-
   const [dragging, setDragging] = useState(false);
   const [dragDate, setDragDate] = useState<string | null>(null);
   const [dragStartHour, setDragStartHour] = useState<number | null>(null);
   const [dragEndHour, setDragEndHour] = useState<number | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
+  const now = useCurrentTime();
 
   const effectiveOffset = viewMode === "month" ? weekOffset : weekOffset * numDays;
   const allDates = getDatesForView(viewMode, numDays, effectiveOffset);
@@ -109,15 +104,17 @@ export default function WeekCalendar({ events, onContextMenu, onAddEvent, onClic
       const today = new Date();
       const targetMonth = today.getMonth() + weekOffset;
       const targetDate = new Date(today.getFullYear(), targetMonth, 1);
-      const monthName = targetDate.toLocaleDateString("en-US", { month: "long" });
-      return `${monthName} ${targetDate.getFullYear()}`;
+      return `${targetDate.toLocaleDateString("en-US", { month: "long" })} ${targetDate.getFullYear()}`;
     }
     if (displayDates.length === 0) return "";
     const first = new Date(displayDates[0] + "T12:00:00");
-    return `${getMonthName(displayDates[0])} ${first.getFullYear()}`;
+    const last = new Date(displayDates[displayDates.length - 1] + "T12:00:00");
+    if (first.getMonth() === last.getMonth()) {
+      return `${getMonthName(displayDates[0])} ${first.getFullYear()}`;
+    }
+    return `${first.toLocaleDateString("en-US", { month: "short" })} – ${last.toLocaleDateString("en-US", { month: "short" })} ${last.getFullYear()}`;
   })();
 
-  // Month grid data
   const monthGridDates = (() => {
     if (viewMode !== "month") return [];
     const today = new Date();
@@ -130,15 +127,11 @@ export default function WeekCalendar({ events, onContextMenu, onAddEvent, onClic
     if (viewMode !== "month") return -1;
     const today = new Date();
     const targetMonth = today.getMonth() + weekOffset;
-    const targetDate = new Date(today.getFullYear(), targetMonth, 1);
-    return targetDate.getMonth();
+    return new Date(today.getFullYear(), targetMonth, 1).getMonth();
   })();
 
   const handleMouseDown = (date: string, hour: number) => {
-    setDragging(true);
-    setDragDate(date);
-    setDragStartHour(hour);
-    setDragEndHour(hour + 1);
+    setDragging(true); setDragDate(date); setDragStartHour(hour); setDragEndHour(hour + 1);
   };
 
   const handleMouseMove = useCallback((hour: number) => {
@@ -151,275 +144,139 @@ export default function WeekCalendar({ events, onContextMenu, onAddEvent, onClic
       const start = Math.min(dragStartHour, dragEndHour - 1);
       const end = Math.max(dragStartHour + 1, dragEndHour);
       const newEvent: CalendarEvent = {
-        id: generateId(),
-        title: "New Event",
-        date: dragDate,
+        id: generateId(), title: "New Event", date: dragDate,
         startTime: `${start.toString().padStart(2, "0")}:00`,
-        endTime: `${end.toString().padStart(2, "0")}:00`,
-        color: "green",
+        endTime: `${end.toString().padStart(2, "0")}:00`, color: "green",
       };
       onAddEvent(newEvent);
       setTimeout(() => onClickEvent(newEvent, window.innerWidth / 2, 200), 50);
     }
-    setDragging(false);
-    setDragDate(null);
-    setDragStartHour(null);
-    setDragEndHour(null);
-  };
-
-  const handleSync = () => {
-    setSyncing(true);
-    setTimeout(() => {
-      setSyncing(false);
-      alert("Calendar synced to Google Calendar! (In production, this would use the Google Calendar API with OAuth.)");
-    }, 1500);
+    setDragging(false); setDragDate(null); setDragStartHour(null); setDragEndHour(null);
   };
 
   const handlePrev = () => setWeekOffset(weekOffset - 1);
   const handleNext = () => setWeekOffset(weekOffset + 1);
 
-  const colTemplate = `60px repeat(${displayDates.length}, 1fr)`;
+  const colTemplate = `56px repeat(${displayDates.length}, 1fr)`;
   const weekdayHeaders = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const MAX_VISIBLE_EVENTS = 3;
+
+  // Current time position
+  const nowHour = now.getHours();
+  const nowMinute = now.getMinutes();
+  const nowTopPx = ((nowHour - 6) * HOUR_HEIGHT) + (nowMinute / 60) * HOUR_HEIGHT;
+  const todayStr = now.toISOString().split("T")[0];
 
   return (
-    <div className="w-full max-w-6xl mx-auto px-4">
-      {/* Calendar toolbar */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <h2 className="text-lg font-semibold font-heading" style={{ color: "var(--text-primary)" }}>{monthLabel}</h2>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {/* Sync button */}
-          <button
-            onClick={handleSync}
-            disabled={syncing}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors disabled:opacity-50"
-            style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-color)", color: "var(--text-secondary)" }}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={syncing ? "animate-spin" : ""}>
-              <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" /><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
-            </svg>
-            {syncing ? "Syncing..." : "Sync to Google"}
-          </button>
-
-          {/* View mode dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => { setShowViewMenu(!showViewMenu); setShowDaysMenu(false); setShowSettingsMenu(false); }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors"
-              style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-color)", color: "var(--text-primary)" }}
-            >
-              {viewMode === "day" ? "Day" : viewMode === "week" ? "Week" : "Month"}
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="2"><path d="M6 9l6 6 6-6" /></svg>
-            </button>
-            {showViewMenu && (
-              <div className="absolute right-0 top-full mt-1 w-48 rounded-xl shadow-2xl overflow-hidden z-50" style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-color)" }}>
-                {([
-                  { m: "day" as CalendarViewMode, label: "Day", shortcut: "1 or D" },
-                  { m: "week" as CalendarViewMode, label: "Week", shortcut: "0 or W" },
-                  { m: "month" as CalendarViewMode, label: "Month", shortcut: "M" },
-                ]).map(({ m, label, shortcut }) => (
-                  <button
-                    key={m}
-                    onClick={() => { setViewMode(m); setWeekOffset(0); setShowViewMenu(false); if (m === "day") setNumDays(1); else if (m === "week") setNumDays(7); }}
-                    className="w-full flex items-center justify-between px-3 py-2 text-sm transition-colors"
-                    style={{ color: viewMode === m ? "var(--text-primary)" : "var(--text-secondary)", background: viewMode === m ? "var(--bg-hover)" : "transparent" }}
-                  >
-                    <div className="flex items-center gap-2">
-                      {viewMode === m && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#5a8a4a" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>}
-                      {viewMode !== m && <div className="w-3" />}
-                      {label}
-                    </div>
-                    <span className="text-xs" style={{ color: "var(--text-muted)" }}>{shortcut}</span>
-                  </button>
-                ))}
-
-                <div style={{ borderTop: "1px solid var(--border-color)" }} />
-
-                {/* Number of days */}
-                <div className="relative">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setShowDaysMenu(!showDaysMenu); }}
-                    className="w-full flex items-center justify-between px-3 py-2 text-sm transition-colors"
-                    style={{ color: "var(--text-secondary)" }}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="w-3" />
-                      Number of days
-                    </div>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2"><path d="M9 18l6-6-6-6" /></svg>
-                  </button>
-                  {showDaysMenu && (
-                    <div className="absolute left-full top-0 ml-1 w-36 rounded-xl shadow-2xl overflow-hidden z-50" style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-color)" }}>
-                      {[2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
-                        <button
-                          key={n}
-                          onClick={() => { setNumDays(n); setViewMode("week"); setShowDaysMenu(false); setShowViewMenu(false); }}
-                          className="w-full flex items-center justify-between px-3 py-1.5 text-sm transition-colors"
-                          style={{ color: numDays === n ? "var(--text-primary)" : "var(--text-secondary)", background: numDays === n ? "var(--bg-hover)" : "transparent" }}
-                        >
-                          {n} days
-                          <span className="text-xs" style={{ color: "var(--text-muted)" }}>{n}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* View settings */}
-                <div className="relative">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setShowSettingsMenu(!showSettingsMenu); }}
-                    className="w-full flex items-center justify-between px-3 py-2 text-sm transition-colors"
-                    style={{ color: "var(--text-secondary)" }}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="w-3" />
-                      View settings
-                    </div>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2"><path d="M9 18l6-6-6-6" /></svg>
-                  </button>
-                  {showSettingsMenu && (
-                    <div className="absolute left-full top-0 ml-1 w-56 rounded-xl shadow-2xl overflow-hidden z-50" style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-color)" }}>
-                      <button
-                        onClick={() => setShowWeekends(!showWeekends)}
-                        className="w-full flex items-center justify-between px-3 py-2 text-sm transition-colors"
-                        style={{ color: "var(--text-secondary)" }}
-                      >
-                        <div className="flex items-center gap-2">
-                          {showWeekends && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#5a8a4a" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>}
-                          {!showWeekends && <div className="w-3" />}
-                          Weekends
-                        </div>
-                        <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>shift+E</span>
-                      </button>
-                      <button
-                        onClick={() => setShowDeclinedEvents(!showDeclinedEvents)}
-                        className="w-full flex items-center justify-between px-3 py-2 text-sm transition-colors"
-                        style={{ color: "var(--text-secondary)" }}
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          {showDeclinedEvents && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#5a8a4a" strokeWidth="3" className="flex-shrink-0"><polyline points="20 6 9 17 4 12" /></svg>}
-                          {!showDeclinedEvents && <div className="w-3 flex-shrink-0" />}
-                          <span className="truncate">Declined eve...</span>
-                        </div>
-                        <span className="text-[10px] flex-shrink-0 ml-2" style={{ color: "var(--text-muted)" }}>shift &#8984; D</span>
-                      </button>
-                      <button className="w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors" style={{ color: "var(--text-secondary)" }}>
-                        <div className="w-3" />
-                        Week numbers
-                      </button>
-                      <div style={{ borderTop: "1px solid var(--border-color)" }} />
-                      <button className="w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors" style={{ color: "var(--text-secondary)" }}>
-                        <div className="w-3" />
-                        General settings
-                        <span className="ml-auto text-[10px]" style={{ color: "var(--text-muted)" }}>Cmd+,</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Today button */}
+    <div className="w-full h-full flex flex-col">
+      {/* Toolbar — Google Calendar style */}
+      <div className="flex items-center justify-between h-10 px-4 flex-shrink-0">
+        <div className="flex items-center gap-4">
+          {/* Today */}
           <button
             onClick={() => setWeekOffset(0)}
-            className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+            className="px-3.5 py-1.5 rounded-lg text-[13px] font-medium transition-colors"
             style={weekOffset === 0
-              ? { background: "var(--accent-green)", color: "white" }
-              : { background: "var(--bg-tertiary)", border: "1px solid var(--border-color)", color: "var(--text-secondary)" }
+              ? { background: "var(--accent)", color: "white" }
+              : { border: "1px solid var(--border-color)", color: "var(--text-secondary)" }
             }
           >
             Today
           </button>
 
           {/* Nav arrows */}
-          <div className="flex items-center gap-0.5">
-            <button onClick={handlePrev} className="p-1.5 rounded-md transition-colors" onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-tertiary)"} onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+          <div className="flex items-center gap-1">
+            <button onClick={handlePrev} className="w-8 h-8 rounded-full flex items-center justify-center transition-colors" onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-hover)"} onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
             </button>
-            <button onClick={handleNext} className="p-1.5 rounded-md transition-colors" onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-tertiary)"} onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
+            <button onClick={handleNext} className="w-8 h-8 rounded-full flex items-center justify-center transition-colors" onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-hover)"} onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
             </button>
           </div>
+
+          {/* Month label */}
+          <h2 className="text-[17px] font-medium" style={{ color: "var(--text-primary)" }}>{monthLabel}</h2>
+        </div>
+
+        {/* View selector */}
+        <div className="relative">
+          <button
+            onClick={() => setShowViewMenu(!showViewMenu)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors"
+            style={{ border: "1px solid var(--border-color)", color: "var(--text-primary)" }}
+          >
+            {viewMode === "day" ? "Day" : viewMode === "week" ? "Week" : "Month"}
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2"><path d="M6 9l6 6 6-6" /></svg>
+          </button>
+          {showViewMenu && (
+            <div className="absolute right-0 top-full mt-1 w-40 rounded-lg shadow-lg overflow-hidden z-50" style={{ background: "var(--bg-secondary)", border: "1px solid var(--border-color)" }}>
+              {([
+                { m: "day" as CalendarViewMode, label: "Day" },
+                { m: "week" as CalendarViewMode, label: "Week" },
+                { m: "month" as CalendarViewMode, label: "Month" },
+              ]).map(({ m, label }) => (
+                <button
+                  key={m}
+                  onClick={() => { setViewMode(m); setWeekOffset(0); setShowViewMenu(false); if (m === "day") setNumDays(1); else if (m === "week") setNumDays(7); }}
+                  className="w-full text-left px-3 py-2 text-[13px] transition-colors"
+                  style={{ color: viewMode === m ? "var(--accent)" : "var(--text-primary)", background: viewMode === m ? "var(--bg-hover)" : "transparent", fontWeight: viewMode === m ? 500 : 400 }}
+                  onMouseEnter={(e) => { if (viewMode !== m) e.currentTarget.style.background = "var(--bg-hover)"; }}
+                  onMouseLeave={(e) => { if (viewMode !== m) e.currentTarget.style.background = "transparent"; }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Calendar grid */}
+      {/* ===== MONTH VIEW ===== */}
       {viewMode === "month" ? (
-        /* ===== MONTH VIEW ===== */
-        <div className="rounded-2xl overflow-hidden" style={{ background: "var(--card-bg)", border: "1px solid var(--border-subtle)" }}>
-          {/* Weekday header */}
-          <div className="grid grid-cols-7" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+        <div className="flex-1 min-h-0 overflow-hidden" style={{ background: "var(--card-bg)", borderTop: "1px solid var(--border-color)" }}>
+          <div className="grid grid-cols-7" style={{ borderBottom: "1px solid var(--border-color)" }}>
             {weekdayHeaders.map((day) => (
-              <div key={day} className="px-2 py-2.5 text-center text-xs font-medium" style={{ color: "var(--text-muted)" }}>
+              <div key={day} className="px-2 py-2 text-center text-[11px] font-medium uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
                 {day}
               </div>
             ))}
           </div>
-
-          {/* Date grid - 6 rows of 7 */}
           <div className="grid grid-cols-7">
             {monthGridDates.map((dateStr, idx) => {
               const dateObj = new Date(dateStr + "T12:00:00");
               const isCurrentMonth = dateObj.getMonth() === currentMonthIndex;
               const isTodayDate = isToday(dateStr);
               const dayEvents = getEventsForDate(events, dateStr);
-              const visibleEvents = dayEvents.slice(0, MAX_VISIBLE_EVENTS);
-              const extraCount = dayEvents.length - MAX_VISIBLE_EVENTS;
+              const visibleEvents = dayEvents.slice(0, 3);
+              const extraCount = dayEvents.length - 3;
 
               return (
-                <div
-                  key={dateStr + idx}
-                  className="min-h-[100px] p-1.5 relative"
-                  style={{
-                    borderTop: idx >= 7 ? "1px solid var(--border-subtle)" : undefined,
-                    borderLeft: idx % 7 !== 0 ? "1px solid var(--border-subtle)" : undefined,
-                  }}
-                >
-                  {/* Day number */}
+                <div key={dateStr + idx} className="min-h-[100px] p-1.5"
+                  style={{ borderTop: idx >= 7 ? "1px solid var(--grid-line-strong)" : undefined, borderLeft: idx % 7 !== 0 ? "1px solid var(--grid-line-strong)" : undefined }}>
                   <div className="flex justify-center mb-1">
-                    <span
-                      className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-medium"
-                      style={isTodayDate
-                        ? { background: "#5a8a4a", color: "white" }
-                        : { color: isCurrentMonth ? "var(--text-primary)" : "var(--text-muted)" }
-                      }
-                    >
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs"
+                      style={isTodayDate ? { background: "var(--accent)", color: "white", fontWeight: 600 } : { color: isCurrentMonth ? "var(--text-primary)" : "var(--text-muted)", fontWeight: isCurrentMonth ? 500 : 400 }}>
                       {dateObj.getDate()}
                     </span>
                   </div>
-
-                  {/* Compact event listings */}
                   <div className="space-y-0.5">
-                    {visibleEvents.map((event) => (
-                      <button
-                        key={event.id}
-                        onClick={(e) => { e.stopPropagation(); onClickEvent(event, e.clientX, e.clientY); }}
-                        onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onContextMenu(event, e.clientX, e.clientY); }}
-                        className="w-full flex items-center gap-1 px-1 py-0.5 rounded text-left transition-colors truncate"
-                        style={{ color: isCurrentMonth ? "var(--text-primary)" : "var(--text-muted)" }}
-                        onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-hover)"}
-                        onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
-                      >
-                        <span
-                          className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                          style={{ background: dotColorMap[event.color] || dotColorMap.green }}
-                        />
-                        <span className="text-[10px] truncate">
-                          <span style={{ color: "var(--text-muted)" }}>{formatTime(event.startTime).replace(" ", "")}</span>
-                          {" "}
-                          <span className="truncate">{event.title}</span>
-                        </span>
-                      </button>
-                    ))}
+                    {visibleEvents.map((event) => {
+                      const es = EVENT_STYLES[event.color] || EVENT_STYLES.green;
+                      return (
+                        <button key={event.id}
+                          onClick={(e) => { e.stopPropagation(); onClickEvent(event, e.clientX, e.clientY); }}
+                          onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onContextMenu(event, e.clientX, e.clientY); }}
+                          className="w-full flex items-center gap-1 px-1 py-0.5 rounded text-left truncate transition-colors"
+                          onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-hover)"}
+                          onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
+                          <span className="w-[5px] h-[5px] rounded-full flex-shrink-0" style={{ background: dotColorMap[event.color] }} />
+                          <span className="text-[10px] truncate" style={{ color: es.text }}>
+                            {event.title}
+                          </span>
+                        </button>
+                      );
+                    })}
                     {extraCount > 0 && (
-                      <div className="text-[10px] px-1 py-0.5 font-medium" style={{ color: "var(--text-muted)" }}>
-                        +{extraCount} more
-                      </div>
+                      <div className="text-[10px] px-1 py-0.5 font-medium" style={{ color: "var(--text-muted)" }}>+{extraCount} more</div>
                     )}
                   </div>
                 </div>
@@ -429,21 +286,20 @@ export default function WeekCalendar({ events, onContextMenu, onAddEvent, onClic
         </div>
       ) : (
         /* ===== DAY / WEEK VIEW ===== */
-        <div className="rounded-2xl overflow-hidden" style={{ background: "var(--card-bg)", border: "1px solid var(--border-subtle)" }}>
-          {/* Header */}
-          <div className="grid" style={{ gridTemplateColumns: colTemplate, borderBottom: "1px solid var(--border-subtle)" }}>
-            <div className="px-2 py-3 text-xs" style={{ color: "var(--text-muted)" }}></div>
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden" style={{ background: "var(--card-bg)", borderTop: "1px solid var(--border-color)" }}>
+          {/* Day headers */}
+          <div className="grid shrink-0" style={{ gridTemplateColumns: colTemplate, borderBottom: "1px solid var(--border-color)" }}>
+            <div />
             {displayDates.map((date) => {
               const today = isToday(date);
               return (
-                <div key={date} className="px-2 py-3 text-center transition-colors">
-                  <div className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>{getDayName(date)}</div>
+                <div key={date} className="py-2.5 text-center">
+                  <div className="text-[11px] uppercase tracking-wider mb-0.5" style={{ color: today ? "var(--accent)" : "var(--text-muted)", fontWeight: 500 }}>
+                    {getDayName(date)}
+                  </div>
                   <div
-                    className="inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium transition-all"
-                    style={today
-                      ? { background: "var(--accent-green)", color: "white" }
-                      : { color: "var(--text-primary)" }
-                    }
+                    className="inline-flex items-center justify-center w-9 h-9 rounded-full text-[15px] transition-all"
+                    style={today ? { background: "var(--accent)", color: "white", fontWeight: 600 } : { color: "var(--text-primary)", fontWeight: 400 }}
                   >
                     {getDayNumber(date)}
                   </div>
@@ -453,42 +309,46 @@ export default function WeekCalendar({ events, onContextMenu, onAddEvent, onClic
           </div>
 
           {/* Time grid */}
-          <div
-            ref={gridRef}
-            className="max-h-[500px] overflow-y-auto select-none"
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-          >
+          <div ref={gridRef} className="flex-1 min-h-0 overflow-y-auto select-none" onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
             <div className="grid relative" style={{ gridTemplateColumns: colTemplate }}>
               {hours.map((hour) => (
                 <div key={hour} className="contents">
-                  <div className="px-2 py-0 h-14 flex items-start justify-end pr-3">
-                    <span className="text-[10px] -mt-1.5" style={{ color: "var(--text-muted)" }}>
+                  {/* Time label */}
+                  <div className="h-[60px] flex items-start justify-end pr-2 pt-0">
+                    <span className="text-[11px] -mt-2 font-light" style={{ color: "var(--text-muted)" }}>
                       {hour === 0 ? "12 AM" : hour < 12 ? `${hour} AM` : hour === 12 ? "12 PM" : `${hour - 12} PM`}
                     </span>
                   </div>
-                  {displayDates.map((date) => (
-                    <div
-                      key={`${date}-${hour}`}
-                      className="h-14 relative transition-colors cursor-crosshair"
-                      style={{ borderTop: "1px solid var(--border-subtle)", borderLeft: "1px solid var(--border-subtle)" }}
-                      onMouseDown={(e) => { if (e.button === 0) handleMouseDown(date, hour); }}
-                      onMouseMove={() => handleMouseMove(hour)}
-                    >
-                      {/* Drag preview */}
-                      {dragging && dragDate === date && dragStartHour !== null && dragEndHour !== null && hour === Math.min(dragStartHour, dragEndHour - 1) && (
-                        <div
-                          className="absolute left-0.5 right-0.5 rounded-md bg-[#5a8a4a]/50 border border-[#5a8a4a] z-20 pointer-events-none"
-                          style={{ top: 0, height: `${Math.abs((dragEndHour || dragStartHour + 1) - dragStartHour) * HOUR_HEIGHT}px` }}
-                        >
-                          <p className="text-[10px] text-white/80 px-1.5 pt-1">New Event</p>
-                        </div>
-                      )}
+                  {/* Day cells */}
+                  {displayDates.map((date) => {
+                    const cellEvents = getEventsForDate(events, date).filter((e) => parseInt(e.startTime.split(":")[0]) === hour);
 
-                      {/* Events */}
-                      {getEventsForDate(events, date)
-                        .filter((e) => parseInt(e.startTime.split(":")[0]) === hour)
-                        .map((event) => {
+                    return (
+                      <div
+                        key={`${date}-${hour}`}
+                        className="h-[60px] relative cursor-crosshair"
+                        style={{ borderTop: "1px solid var(--grid-line)", borderLeft: "1px solid var(--grid-line)" }}
+                        onMouseDown={(e) => { if (e.button === 0) handleMouseDown(date, hour); }}
+                        onMouseMove={() => handleMouseMove(hour)}
+                      >
+                        {/* Half-hour line */}
+                        <div className="absolute left-0 right-0 top-[30px]" style={{ borderTop: "1px dashed var(--grid-line)" }} />
+
+                        {/* Current time line */}
+                        {date === todayStr && hour === nowHour && (
+                          <div className="now-line" style={{ top: `${(nowMinute / 60) * HOUR_HEIGHT}px` }} />
+                        )}
+
+                        {/* Drag preview */}
+                        {dragging && dragDate === date && dragStartHour !== null && dragEndHour !== null && hour === Math.min(dragStartHour, dragEndHour - 1) && (
+                          <div className="absolute left-1 right-1 rounded-md z-20 pointer-events-none"
+                            style={{ top: 0, height: `${Math.abs((dragEndHour || dragStartHour + 1) - dragStartHour) * HOUR_HEIGHT}px`, background: "var(--ev-green-bg)", border: "1px solid var(--ev-green-border)", borderLeft: "3px solid var(--ev-green-border)" }}>
+                            <p className="text-[11px] px-2 pt-1" style={{ color: "var(--ev-green-text)" }}>New Event</p>
+                          </div>
+                        )}
+
+                        {/* Events */}
+                        {cellEvents.map((event) => {
                           const startH = parseInt(event.startTime.split(":")[0]);
                           const startM = parseInt(event.startTime.split(":")[1]);
                           const endH = parseInt(event.endTime.split(":")[0]);
@@ -496,6 +356,7 @@ export default function WeekCalendar({ events, onContextMenu, onAddEvent, onClic
                           const durationMinutes = (endH * 60 + endM) - (startH * 60 + startM);
                           const heightPx = (durationMinutes / 60) * HOUR_HEIGHT;
                           const topPx = (startM / 60) * HOUR_HEIGHT;
+                          const es = EVENT_STYLES[event.color] || EVENT_STYLES.green;
 
                           return (
                             <div
@@ -503,20 +364,21 @@ export default function WeekCalendar({ events, onContextMenu, onAddEvent, onClic
                               onClick={(e) => { e.stopPropagation(); onClickEvent(event, e.clientX, e.clientY); }}
                               onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onContextMenu(event, e.clientX, e.clientY); }}
                               onMouseDown={(e) => e.stopPropagation()}
-                              className={`absolute left-0.5 right-0.5 rounded-md border-l-2 px-1.5 py-1 overflow-hidden z-10 cursor-pointer hover:brightness-125 hover:scale-[1.02] hover:z-20 active:scale-100 transition-all ${colorMap[event.color] || colorMap.green}`}
-                              style={{ top: `${topPx}px`, height: `${Math.max(heightPx, 24)}px` }}
+                              className="cal-event absolute left-1 right-1 z-10"
+                              style={{ top: `${topPx}px`, height: `${Math.max(heightPx, 22)}px`, background: es.bg, borderLeftColor: es.border }}
                             >
-                              <p className="text-[10px] font-medium text-white truncate">{event.title}</p>
-                              {heightPx > 30 && (
-                                <p className="text-[9px] text-white/70 truncate">
+                              <p className="text-[11px] font-medium truncate leading-tight" style={{ color: es.text }}>{event.title}</p>
+                              {heightPx > 34 && (
+                                <p className="text-[10px] truncate mt-px" style={{ color: es.text, opacity: 0.7 }}>
                                   {formatTime(event.startTime)} – {formatTime(event.endTime)}
                                 </p>
                               )}
                             </div>
                           );
                         })}
-                    </div>
-                  ))}
+                      </div>
+                    );
+                  })}
                 </div>
               ))}
             </div>

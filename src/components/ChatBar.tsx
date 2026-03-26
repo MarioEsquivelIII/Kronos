@@ -407,11 +407,9 @@ export default function ChatBar({ messages, onSendMessage, isExpanded, onToggleE
       onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
     >
       <div className="w-8 h-8 rounded-lg bg-[#5a8a4a] flex items-center justify-center">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-          <line x1="16" y1="2" x2="16" y2="6" />
-          <line x1="8" y1="2" x2="8" y2="6" />
-          <line x1="3" y1="10" x2="21" y2="10" />
+        <svg width="18" height="18" viewBox="0 0 32 32" fill="none">
+          <path d="M8 6 L16 2 L24 6 L24 18 L16 26 L8 18Z" fill="white" opacity="0.9"/>
+          <path d="M16 10 L22 14 L22 22 L16 26 L10 22 L10 14Z" fill="white" opacity="0.5"/>
         </svg>
       </div>
     </button>

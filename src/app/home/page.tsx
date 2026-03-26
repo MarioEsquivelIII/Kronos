@@ -194,84 +194,77 @@ export default function HomePage() {
   return (
     <div className="min-h-screen" style={{ background: "var(--bg-primary)" }}>
       {/* Top nav */}
-      <header className="sticky top-0 z-40 backdrop-blur-md" style={{ background: "color-mix(in srgb, var(--bg-primary) 90%, transparent)", borderBottom: "1px solid var(--border-subtle)" }}>
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg" style={{ background: "var(--accent-green)" }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                <line x1="16" y1="2" x2="16" y2="6" />
-                <line x1="8" y1="2" x2="8" y2="6" />
-                <line x1="3" y1="10" x2="21" y2="10" />
+      <header className="sticky top-0 z-40 backdrop-blur-lg" style={{ background: "color-mix(in srgb, var(--bg-primary) 85%, transparent)", borderBottom: "1px solid var(--border-color)" }}>
+        <div className="px-4 h-12 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="flex items-center justify-center w-7 h-7 rounded-md" style={{ background: "var(--accent)" }}>
+              <svg width="16" height="16" viewBox="0 0 32 32" fill="none">
+                <path d="M8 6 L16 2 L24 6 L24 18 L16 26 L8 18Z" fill="white" opacity="0.9"/>
+                <path d="M16 10 L22 14 L22 22 L16 26 L10 22 L10 14Z" fill="white" opacity="0.5"/>
               </svg>
             </div>
-            <span className="text-sm font-semibold font-heading" style={{ color: "var(--text-primary)" }}>Kronos</span>
+            <span className="text-[14px] font-semibold tracking-tight" style={{ color: "var(--text-primary)" }}>Kronos</span>
           </div>
 
           {/* View toggle */}
-          <div className="flex items-center gap-1 rounded-lg p-0.5" style={{ background: "var(--bg-secondary)" }}>
+          <div className="flex items-center gap-0.5 rounded-lg p-0.5" style={{ background: "var(--bg-tertiary)" }}>
             <button
               onClick={() => setView("home")}
-              className="px-3 py-1.5 rounded-md text-xs font-medium transition-colors"
-              style={{ background: view === "home" ? "var(--bg-hover)" : "transparent", color: view === "home" ? "var(--text-primary)" : "var(--text-muted)" }}
+              className="px-3.5 py-1 rounded-md text-[12px] font-medium transition-colors"
+              style={{ background: view === "home" ? "var(--bg-secondary)" : "transparent", color: view === "home" ? "var(--text-primary)" : "var(--text-muted)", boxShadow: view === "home" ? "0 1px 2px rgba(0,0,0,0.1)" : "none" }}
             >
               Home
             </button>
             <button
               onClick={() => setView("calendar")}
-              className="px-3 py-1.5 rounded-md text-xs font-medium transition-colors"
-              style={{ background: view === "calendar" ? "var(--bg-hover)" : "transparent", color: view === "calendar" ? "var(--text-primary)" : "var(--text-muted)" }}
+              className="px-3.5 py-1 rounded-md text-[12px] font-medium transition-colors"
+              style={{ background: view === "calendar" ? "var(--bg-secondary)" : "transparent", color: view === "calendar" ? "var(--text-primary)" : "var(--text-muted)", boxShadow: view === "calendar" ? "0 1px 2px rgba(0,0,0,0.1)" : "none" }}
             >
               Calendar
             </button>
           </div>
 
           {/* User menu + theme toggle */}
-          <div className="flex items-center gap-2">
-            {/* Theme toggle */}
+          <div className="flex items-center gap-1.5">
             <button
               onClick={toggleTheme}
-              className="p-1.5 rounded-lg transition-colors"
+              className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
               style={{ color: "var(--text-muted)" }}
               title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+              onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-hover)"}
+              onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
             >
               {theme === "dark" ? (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
                 </svg>
               ) : (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
                 </svg>
               )}
             </button>
             <button
               onClick={() => router.push("/account")}
-              className="flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors"
+              className="w-8 h-8 rounded-full flex items-center justify-center transition-colors overflow-hidden"
+              onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-hover)"}
+              onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
             >
               {user?.user_metadata?.avatar_url ? (
-                <img src={user.user_metadata.avatar_url} alt="" className="w-6 h-6 rounded-full" />
+                <img src={user.user_metadata.avatar_url} alt="" className="w-7 h-7 rounded-full" />
               ) : (
-                <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold text-white" style={{ background: "var(--accent-green)" }}>
+                <div className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold text-white" style={{ background: "var(--accent)" }}>
                   {displayName.charAt(0).toUpperCase()}
                 </div>
               )}
-              <span className="text-xs" style={{ color: "var(--text-secondary)" }}>{displayName}</span>
-            </button>
-            <button
-              onClick={handleLogout}
-              className="text-xs transition-colors"
-              style={{ color: "var(--text-muted)" }}
-            >
-              Log out
             </button>
           </div>
         </div>
       </header>
 
       {/* Main content */}
-      <main className={`pt-8 transition-all ${chatExpanded && chatMode !== "sidebar" ? "pb-[58vh]" : "pb-16"} ${chatMode === "sidebar" ? "mr-[400px]" : ""}`}>
-        {view === "home" ? (
+      {view === "home" ? (
+        <main className={`pt-8 transition-all ${chatExpanded && chatMode !== "sidebar" ? "pb-[58vh]" : "pb-16"} ${chatMode === "sidebar" ? "mr-100" : ""}`}>
           <div className="space-y-8">
             {/* Greeting */}
             <div className="max-w-2xl mx-auto px-4">
@@ -285,15 +278,17 @@ export default function HomePage() {
 
             <ComingUp events={events} onContextMenu={handleContextMenu} />
           </div>
-        ) : (
+        </main>
+      ) : (
+        <div className={`flex flex-col transition-all ${chatMode === "sidebar" ? "mr-100" : ""}`} style={{ height: "calc(100vh - 48px)" }}>
           <WeekCalendar
             events={events}
             onContextMenu={handleContextMenu}
             onAddEvent={handleAddEvent}
             onClickEvent={handleClickEvent}
           />
-        )}
-      </main>
+        </div>
+      )}
 
       {/* Chat bar */}
       <ChatBar

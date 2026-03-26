@@ -5,14 +5,16 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 
-export default function LoginPage() {
+export default function SignUpPage() {
   const router = useRouter();
   const supabase = createClient();
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -20,18 +22,28 @@ export default function LoginPage() {
     });
   }, [router, supabase.auth]);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) { setError("Please fill in all fields."); return; }
+    if (!name || !email || !password) { setError("Please fill in all fields."); return; }
+    if (password.length < 6) { setError("Password must be at least 6 characters."); return; }
     setIsLoading(true);
     setError("");
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name: name },
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+
     if (error) {
       setError(error.message);
       setIsLoading(false);
     } else {
-      router.push("/home");
+      setSuccess(true);
+      setIsLoading(false);
     }
   };
 
@@ -48,6 +60,27 @@ export default function LoginPage() {
     }
   };
 
+  if (success) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#1a1a1a]">
+        <div className="w-full max-w-sm px-6 text-center">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[#5a8a4a] mb-4">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </div>
+          <h1 className="text-xl font-semibold text-[#e8e8e8] mb-2">Check your email</h1>
+          <p className="text-sm text-[#999] mb-6">
+            We sent a confirmation link to <span className="text-[#e8e8e8]">{email}</span>. Click it to activate your account.
+          </p>
+          <Link href="/login" className="text-sm text-[#5a8a4a] hover:text-[#6a9a5a] font-medium transition-colors">
+            Back to sign in
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#1a1a1a]">
       <div className="w-full max-w-sm px-6">
@@ -59,8 +92,8 @@ export default function LoginPage() {
               <path d="M16 10 L22 14 L22 22 L16 26 L10 22 L10 14Z" fill="white" opacity="0.5"/>
             </svg>
           </div>
-          <h1 className="text-2xl font-semibold text-[#e8e8e8]">Welcome back</h1>
-          <p className="text-sm text-[#999] mt-1">Sign in to Kronos</p>
+          <h1 className="text-2xl font-semibold text-[#e8e8e8]">Create an account</h1>
+          <p className="text-sm text-[#999] mt-1">Get started with Kronos</p>
         </div>
 
         {error && (
@@ -69,8 +102,18 @@ export default function LoginPage() {
           </div>
         )}
 
-        {/* Email/Password form */}
-        <form onSubmit={handleLogin} className="space-y-3 mb-4">
+        {/* Sign up form */}
+        <form onSubmit={handleSignUp} className="space-y-3 mb-4">
+          <div>
+            <label className="block text-xs text-[#888] mb-1.5">Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Your name"
+              className="w-full px-3.5 py-2.5 rounded-lg bg-[#242424] border border-[#333] text-sm text-[#e8e8e8] placeholder-[#555] focus:border-[#5a8a4a] transition-colors"
+            />
+          </div>
           <div>
             <label className="block text-xs text-[#888] mb-1.5">Email</label>
             <input
@@ -82,17 +125,12 @@ export default function LoginPage() {
             />
           </div>
           <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs text-[#888]">Password</label>
-              <Link href="/forgot-password" className="text-xs text-[#5a8a4a] hover:text-[#6a9a5a] transition-colors">
-                Forgot password?
-              </Link>
-            </div>
+            <label className="block text-xs text-[#888] mb-1.5">Password</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password"
+              placeholder="At least 6 characters"
               className="w-full px-3.5 py-2.5 rounded-lg bg-[#242424] border border-[#333] text-sm text-[#e8e8e8] placeholder-[#555] focus:border-[#5a8a4a] transition-colors"
             />
           </div>
@@ -101,7 +139,7 @@ export default function LoginPage() {
             disabled={isLoading}
             className="w-full px-4 py-2.5 rounded-lg bg-[#5a8a4a] text-white text-sm font-medium hover:bg-[#6a9a5a] transition-colors disabled:opacity-50"
           >
-            {isLoading ? "Signing in..." : "Sign in"}
+            {isLoading ? "Creating account..." : "Create account"}
           </button>
         </form>
 
@@ -133,11 +171,11 @@ export default function LoginPage() {
           {isGoogleLoading ? "Connecting..." : "Continue with Google"}
         </button>
 
-        {/* Sign up link */}
+        {/* Login link */}
         <p className="text-sm text-[#999] text-center mt-6">
-          Don&apos;t have an account?{" "}
-          <Link href="/signup" className="text-[#5a8a4a] hover:text-[#6a9a5a] font-medium transition-colors">
-            Sign up
+          Already have an account?{" "}
+          <Link href="/login" className="text-[#5a8a4a] hover:text-[#6a9a5a] font-medium transition-colors">
+            Sign in
           </Link>
         </p>
 
