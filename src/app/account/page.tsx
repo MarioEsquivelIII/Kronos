@@ -1,8 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
+import GoogleCalendarSyncFlow from "@/components/GoogleCalendarSyncFlow";
+import type { CalendarEvent } from "@/lib/events";
+import { GCAL_IMPORT_KEY } from "@/lib/gcalSync";
 
 export default function AccountPage() {
   const router = useRouter();
@@ -10,10 +13,20 @@ export default function AccountPage() {
   const [user, setUser] = useState<{ email: string; name: string; avatar_url?: string } | null>(null);
   const [name, setName] = useState("");
   const [saved, setSaved] = useState(false);
+  const [sessionIsSupabase, setSessionIsSupabase] = useState(false);
+  const [googleProviderToken, setGoogleProviderToken] = useState<string | null>(null);
+  const [gcalSyncOpen, setGcalSyncOpen] = useState(false);
+  const [gcalOAuthError, setGcalOAuthError] = useState<string | null>(null);
+
+  const refreshSessionTokens = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    setGoogleProviderToken(session?.provider_token ?? null);
+  }, [supabase.auth]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user: supaUser } }) => {
       if (supaUser) {
+        setSessionIsSupabase(true);
         const u = {
           email: supaUser.email || "",
           name: supaUser.user_metadata?.full_name || supaUser.user_metadata?.name || supaUser.email?.split("@")[0] || "User",
@@ -22,6 +35,7 @@ export default function AccountPage() {
         setUser(u);
         setName(u.name);
       } else {
+        setSessionIsSupabase(false);
         // Fallback to localStorage
         const stored = localStorage.getItem("kronos_user");
         if (!stored) { router.push("/login"); return; }
@@ -30,7 +44,38 @@ export default function AccountPage() {
         setName(parsed.name);
       }
     });
-  }, [router, supabase.auth]);
+    refreshSessionTokens();
+  }, [router, supabase.auth, refreshSessionTokens]);
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setGoogleProviderToken(session?.provider_token ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, [supabase.auth]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("gcal_pending") !== "1") return;
+    url.searchParams.delete("gcal_pending");
+    const search = url.searchParams.toString();
+    window.history.replaceState({}, "", `${url.pathname}${search ? `?${search}` : ""}`);
+
+    void (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.provider_token ?? null;
+      if (token) {
+        setGoogleProviderToken(token);
+        setGcalSyncOpen(true);
+        setGcalOAuthError(null);
+      } else {
+        setGcalOAuthError(
+          "Google Calendar access wasn’t granted or isn’t available on this session. In Supabase, ensure the Google provider allows extra scopes, then try Connect again."
+        );
+      }
+    })();
+  }, [supabase.auth]);
 
   const handleSave = async () => {
     if (!user) return;
@@ -57,10 +102,68 @@ export default function AccountPage() {
     }
   };
 
+  const handleGoogleCalConnect = async () => {
+    setGcalOAuthError(null);
+    if (!sessionIsSupabase) {
+      setGcalOAuthError("Sign in with your account (not guest mode) to connect Google Calendar.");
+      return;
+    }
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          scopes: "https://www.googleapis.com/auth/calendar.readonly",
+          redirectTo: `${origin}/auth/callback?next=${encodeURIComponent("/account?gcal_pending=1")}`,
+          queryParams: {
+            access_type: "offline",
+            prompt: "consent",
+          },
+        },
+      });
+      if (error) {
+        setGcalOAuthError(error.message || "Google sign-in was cancelled or failed.");
+      }
+    } catch (e) {
+      setGcalOAuthError(e instanceof Error ? e.message : "Something went wrong connecting to Google.");
+    }
+  };
+
+  const handleGcalSyncClick = () => {
+    setGcalOAuthError(null);
+    if (!sessionIsSupabase) {
+      setGcalOAuthError("Sign in with your account (not guest mode) to sync Google Calendar.");
+      return;
+    }
+    if (!googleProviderToken) {
+      void handleGoogleCalConnect();
+      return;
+    }
+    setGcalSyncOpen(true);
+  };
+
+  const onGcalImportComplete = (events: CalendarEvent[]) => {
+    try {
+      sessionStorage.setItem(GCAL_IMPORT_KEY, JSON.stringify(events));
+    } catch {
+      setGcalOAuthError("Couldn’t save imported events. Try again with fewer events.");
+      return;
+    }
+    router.push("/home");
+  };
+
   if (!user) return null;
 
   return (
     <div className="min-h-screen bg-[#1a1a1a]">
+      {gcalSyncOpen && googleProviderToken && (
+        <GoogleCalendarSyncFlow
+          open={gcalSyncOpen}
+          accessToken={googleProviderToken}
+          onClose={() => setGcalSyncOpen(false)}
+          onImportComplete={onGcalImportComplete}
+        />
+      )}
       {/* Top nav */}
       <header className="sticky top-0 z-40 bg-[#1a1a1a]/90 backdrop-blur-md border-b border-[#2a2a2a]">
         <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
@@ -148,9 +251,18 @@ export default function AccountPage() {
                   <p className="text-xs text-[#666]">Sync events with Google Calendar</p>
                 </div>
               </div>
-              <button className="px-3 py-1.5 rounded-lg bg-[#2a2a2a] border border-[#333] text-xs text-[#999] hover:text-[#e8e8e8] hover:border-[#5a8a4a] transition-colors">
-                Connect
-              </button>
+              <div className="flex flex-col items-end gap-1">
+                <button
+                  type="button"
+                  onClick={handleGcalSyncClick}
+                  className="px-3 py-1.5 rounded-lg bg-[#2a2a2a] border border-[#333] text-xs text-[#999] hover:text-[#e8e8e8] hover:border-[#5a8a4a] transition-colors"
+                >
+                  {googleProviderToken ? "Sync calendar" : "Connect"}
+                </button>
+                {gcalOAuthError && (
+                  <p className="text-[10px] text-[#e87171] max-w-[200px] text-right leading-snug">{gcalOAuthError}</p>
+                )}
+              </div>
             </div>
           </div>
         </div>
