@@ -63,6 +63,51 @@ Kronos converts that into a structured weekly calendar inside the app.
 
 ---
 
+## Getting Started
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) (v18 or later)
+- A [Supabase](https://supabase.com/) project (for database and auth)
+- An [OpenAI](https://platform.openai.com/) or [Anthropic](https://console.anthropic.com/) API key
+
+### Installation
+
+1. Clone the repository:
+
+   ```bash
+   git clone https://github.com/MarioEsquivelIII/Kronos.git
+   cd Kronos
+   ```
+
+2. Install dependencies:
+
+   ```bash
+   npm install
+   ```
+
+3. Create a `.env` file in the project root with the following variables:
+
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   AI_PROVIDER=openai
+   OPENAI_API_KEY=your_openai_api_key
+   OPENAI_MODEL=gpt-4o
+   ```
+
+4. Set up the database by running the SQL in `supabase/schema.sql` against your Supabase project.
+
+5. Start the development server:
+
+   ```bash
+   npm run dev
+   ```
+
+   The app will be available at [http://localhost:3000](http://localhost:3000).
+
+---
+
 ## Project Structure
 
 ```bash
