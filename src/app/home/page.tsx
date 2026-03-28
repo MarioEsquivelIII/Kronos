@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useLayoutEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import ComingUp from "@/components/ComingUp";
@@ -10,6 +10,7 @@ import EventContextMenu from "@/components/EventContextMenu";
 import EditEventModal from "@/components/EditEventModal";
 import EventDetailPanel from "@/components/EventDetailPanel";
 import { CalendarEvent, sampleEvents, generateId } from "@/lib/events";
+import { EVENTS_SNAPSHOT_KEY, GCAL_IMPORT_KEY } from "@/lib/gcalSync";
 import { ChatMessage } from "@/lib/chat";
 import { useTheme } from "@/lib/theme";
 import { User } from "@supabase/supabase-js";
@@ -52,6 +53,28 @@ export default function HomePage() {
       );
     });
   }, [router, supabase.auth]);
+
+  useLayoutEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(GCAL_IMPORT_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as unknown;
+      if (Array.isArray(parsed)) {
+        setEvents(parsed as CalendarEvent[]);
+      }
+      sessionStorage.removeItem(GCAL_IMPORT_KEY);
+    } catch {
+      sessionStorage.removeItem(GCAL_IMPORT_KEY);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(EVENTS_SNAPSHOT_KEY, JSON.stringify(events));
+    } catch {
+      /* quota */
+    }
+  }, [events]);
 
   const handleContextMenu = useCallback((event: CalendarEvent, x: number, y: number) => {
     setContextMenu({ event, x, y });
