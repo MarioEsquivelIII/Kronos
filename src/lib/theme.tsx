@@ -15,13 +15,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>("dark");
 
   useEffect(() => {
-    const stored = localStorage.getItem("kronos_theme") as Theme | null;
+    const stored = localStorage.getItem("noted_theme") as Theme | null;
     if (stored) setTheme(stored);
   }, []);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("kronos_theme", theme);
+    localStorage.setItem("noted_theme", theme);
   }, [theme]);
 
   const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));

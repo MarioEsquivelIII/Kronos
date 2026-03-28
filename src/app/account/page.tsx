@@ -36,7 +36,7 @@ export default function AccountPage() {
         setName(u.name);
       } else {
         setSessionIsSupabase(false);
-        const stored = localStorage.getItem("kronos_user");
+        const stored = localStorage.getItem("noted_user");
         if (!stored) { router.push("/login"); return; }
         const parsed = JSON.parse(stored);
         setUser(parsed);
@@ -80,7 +80,7 @@ export default function AccountPage() {
     if (!user) return;
     await supabase.auth.updateUser({ data: { full_name: name } });
     const updated = { ...user, name };
-    localStorage.setItem("kronos_user", JSON.stringify(updated));
+    localStorage.setItem("noted_user", JSON.stringify(updated));
     setUser(updated);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -88,15 +88,15 @@ export default function AccountPage() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    localStorage.removeItem("kronos_user");
+    localStorage.removeItem("noted_user");
     router.push("/login");
   };
 
   const handleDeleteAccount = async () => {
     if (confirm("Are you sure you want to delete your account? This cannot be undone.")) {
       await supabase.auth.signOut();
-      localStorage.removeItem("kronos_user");
-      localStorage.removeItem("kronos_events");
+      localStorage.removeItem("noted_user");
+      localStorage.removeItem("noted_events");
       router.push("/login");
     }
   };
@@ -278,7 +278,7 @@ export default function AccountPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm" style={{ color: "var(--text-primary)" }}>Default view</p>
-                <p className="text-xs" style={{ color: "var(--text-muted)" }}>What you see when you open Kronos</p>
+                <p className="text-xs" style={{ color: "var(--text-muted)" }}>What you see when you open Noted</p>
               </div>
               <select className="px-3 py-1.5 rounded-xl text-xs [color-scheme:dark]"
                 style={{ background: "var(--bg-surface)", border: "1px solid var(--border-color)", color: "var(--text-primary)" }}>

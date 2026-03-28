@@ -37,7 +37,7 @@ export default function ResetPasswordPage() {
       <div className="w-full max-w-sm px-6 relative z-10">
         <div className="text-center mb-10">
           <span className="font-logo text-4xl bg-gradient-to-br from-white via-[#c8d0e8] to-[#8b90a8] bg-clip-text text-transparent">
-            Kronos
+            Noted
           </span>
           <p className="text-sm mt-3" style={{ color: "var(--text-secondary)" }}>Set your new password</p>
         </div>

@@ -397,7 +397,7 @@ export default function ChatBar({ messages, onSendMessage, isExpanded, onToggleE
     </div>
   );
 
-  const renderKronosBackButton = () => (
+  const renderNotedBackButton = () => (
     <button
       onClick={() => { updateMode("collapsed"); if (isExpanded) onToggleExpand(); }}
       className="flex items-center gap-2 p-2 rounded-xl transition-colors"
@@ -405,7 +405,7 @@ export default function ChatBar({ messages, onSendMessage, isExpanded, onToggleE
       onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-hover)"}
       onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
     >
-      <span className="font-logo text-lg" style={{ color: "var(--text-primary)" }}>Kronos</span>
+      <span className="font-logo text-lg" style={{ color: "var(--text-primary)" }}>Noted</span>
     </button>
   );
 
@@ -414,7 +414,7 @@ export default function ChatBar({ messages, onSendMessage, isExpanded, onToggleE
     return (
       <div ref={containerRef} className="fixed inset-0 z-50 flex flex-col bg-sky-gradient">
         <div className="flex items-center px-4 py-3 flex-shrink-0">
-          {renderKronosBackButton()}
+          {renderNotedBackButton()}
         </div>
         {messages.length === 0 ? (
           <div className="flex-1 flex items-center justify-center px-4">

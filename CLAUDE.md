@@ -1,6 +1,6 @@
-# CLAUDE.md — Kronos
+# CLAUDE.md — Noted
 
-> AI-assisted weekly calendar app. "Describe your schedule. Kronos builds it."
+> AI-assisted weekly calendar companion. "You mention it. Noted builds it." The chat is your companion: share an idea, it updates your calendar — *Noted.*
 > Author: Mario A. Esquivel III | Hackathon prototype
 
 ---
@@ -19,14 +19,14 @@
 
 ## Project overview
 
-Kronos lets users describe their schedule in natural language (and optionally attach a photo), then generates a structured, editable weekly calendar from that input. Users can follow up in chat to add, move, or remove events without starting over.
+Noted lets users describe their schedule in natural language (and optionally attach a photo), then generates a structured, editable weekly calendar from that input. Users can follow up in chat to add, move, or remove events without starting over.
 
 ---
 
 ## Repo layout
 
 ```
-Kronos/                          ← app root (run all commands from here)
+Noted/                           ← app root (run all commands from here; clone may live under `Kronos/` on disk)
 ├── src/
 │   ├── app/
 │   │   ├── api/chat/route.ts    ← OpenAI API route (core AI layer)
@@ -42,7 +42,7 @@ Kronos/                          ← app root (run all commands from here)
 │   ├── lib/
 │   │   ├── events.ts            ← CalendarEvent type + sampleEvents
 │   │   ├── chat.ts              ← ChatMessage types, offline parse helpers
-│   │   └── theme.tsx            ← light/dark theme (localStorage: kronos_theme)
+│   │   └── theme.tsx            ← light/dark theme (localStorage: noted_theme)
 │   ├── middleware.ts             ← Supabase session refresh + route guards
 │   └── utils/supabase/          ← Supabase client/server/middleware helpers
 ├── public/
@@ -120,7 +120,7 @@ The API route receives `{ message, events, imageBase64? }` and returns a streame
 ## Auth & session model
 
 - Supabase handles auth. Middleware (`src/middleware.ts`) refreshes the session and redirects unauthenticated users away from protected routes.
-- **Fallback path:** when no Supabase session exists, the app reads/writes `localStorage` key `kronos_user` for a lightweight guest user object.
+- **Fallback path:** when no Supabase session exists, the app reads/writes `localStorage` key `noted_user` for a lightweight guest user object.
 - Protected routes: everything except `/login`, `/signup`, `/forgot-password`, `/reset-password`, `/auth/callback`, `/`, and API routes.
 - Account page uses `supabase.auth.updateUser()` and mirrors changes to `localStorage` for the fallback path.
 
@@ -130,19 +130,19 @@ The API route receives `{ message, events, imageBase64? }` and returns a streame
 
 | Area | Status |
 |---|---|
-| Event persistence | ❌ In-memory only. `kronos_events` key in localStorage/Supabase is referenced in account deletion but never written on save. |
+| Event persistence | ❌ In-memory only. `noted_events` key in localStorage is referenced in account deletion but never written on save. |
 | Zod validation | ❌ README mentions it; not in `package.json`. Don't add unless scoped. |
 | Anthropic SDK | ❌ README mentions it; only OpenAI is used in code. |
 | ESLint | ⚠️ ESLint 9 expects a flat config (`eslint.config.*`). `npm run lint` may fail. |
 | Recurring events | ❌ Not implemented. |
-| Google Calendar sync | ❌ Not implemented. |
+| Google Calendar sync | ✅ Import via Account page (Supabase Google OAuth + merge/overwrite). |
 
 ---
 
 ## Development commands
 
 ```bash
-# from Kronos/ directory
+# from app root (`Noted/` or `Kronos/` depending on clone folder)
 npm install
 npm run dev       # starts on http://localhost:3000
 npm run build
@@ -159,7 +159,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 OPENAI_API_KEY=
 ```
 
-Place in `Kronos/.env`. Never commit this file.
+Place in project root `.env` or `.env.local`. Never commit this file.
 
 ---
 

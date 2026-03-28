@@ -86,7 +86,7 @@ export default function LandingPage() {
             style={{ opacity: navLogoOpacity }}
             className="absolute left-1/2 -translate-x-1/2"
           >
-            <span className="font-logo text-2xl text-white drop-shadow-sm">Kronos</span>
+            <span className="font-logo text-2xl text-white drop-shadow-sm">Noted</span>
           </motion.div>
 
           <div className="flex items-center gap-4">
@@ -105,7 +105,7 @@ export default function LandingPage() {
 
       {/* Hero Section — full viewport */}
       <section className="relative h-screen flex flex-col items-center justify-center overflow-hidden z-10">
-        {/* Giant glass "Kronos" — animates on scroll */}
+        {/* Giant glass "Noted" — animates on scroll */}
         <motion.div
           className="fixed z-40"
           style={{
@@ -123,7 +123,7 @@ export default function LandingPage() {
               className="font-logo glass-text"
               style={{ fontSize: "clamp(6rem, 15vw, 14rem)", lineHeight: 1.1 }}
             >
-              Kronos
+              Noted
             </span>
           </div>
         </motion.div>
@@ -145,7 +145,7 @@ export default function LandingPage() {
             onClick={handleCTA}
             className="px-8 py-3.5 rounded-full text-base font-medium bg-white text-[#2a6dcc] hover:bg-white/90 transition-all hover:scale-105 shadow-lg"
           >
-            Open Kronos
+            Open Noted
           </button>
         </motion.div>
 
@@ -182,7 +182,7 @@ export default function LandingPage() {
               <span className="text-white/80">We build it.</span>
             </h2>
             <p className="text-lg max-w-xl mx-auto text-white/60">
-              Tell Kronos what you need, and watch your calendar take shape. No dragging, no clicking through menus.
+              Tell Noted what you need, and watch your calendar take shape. No dragging, no clicking through menus.
             </p>
           </motion.div>
 
@@ -190,7 +190,7 @@ export default function LandingPage() {
             {[
               {
                 title: "Natural language",
-                desc: "Describe your schedule in plain words. Kronos understands context, recurrence, and priorities.",
+                desc: "Describe your schedule in plain words. Noted understands context, recurrence, and priorities.",
                 icon: (
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
@@ -199,7 +199,7 @@ export default function LandingPage() {
               },
               {
                 title: "Image import",
-                desc: "Snap a photo of a class schedule or meeting agenda. Kronos reads it and creates your events.",
+                desc: "Snap a photo of a class schedule or meeting agenda. Noted reads it and creates your events.",
                 icon: (
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" />
@@ -259,8 +259,8 @@ export default function LandingPage() {
           <div className="space-y-6">
             {[
               { step: "01", title: "Describe your schedule", desc: "Type or speak your ideal week in natural language. Upload a photo of a syllabus or timetable." },
-              { step: "02", title: "Kronos generates it", desc: "AI parses your description and creates structured calendar events — dates, times, colors, recurrence." },
-              { step: "03", title: "Refine with follow-ups", desc: "Ask Kronos to move, add, or remove events. No need to start over — just keep talking." },
+              { step: "02", title: "Noted generates it", desc: "AI parses your description and creates structured calendar events — dates, times, colors, recurrence." },
+              { step: "03", title: "Refine with follow-ups", desc: "Ask Noted to move, add, or remove events. No need to start over — just keep talking." },
               { step: "04", title: "Edit visually", desc: "Drag, resize, and fine-tune events directly on your weekly calendar. It's yours to own." },
             ].map((item, i) => (
               <motion.div
@@ -309,7 +309,7 @@ export default function LandingPage() {
               &ldquo;The best calendar is one you never had to build by hand.&rdquo;
             </p>
             <p className="text-sm tracking-wider uppercase text-white/40">
-              The Kronos Philosophy
+              The Noted Philosophy
             </p>
           </div>
         </motion.div>
@@ -328,7 +328,7 @@ export default function LandingPage() {
             Ready to try it?
           </h2>
           <p className="text-lg text-white/60 mb-10">
-            Describe your ideal week. Kronos handles the rest.
+            Describe your ideal week. Noted handles the rest.
           </p>
           <button
             onClick={handleCTA}
@@ -342,7 +342,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="relative z-10 py-10 px-6 border-t border-white/10">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <span className="font-logo text-lg text-white/40">Kronos</span>
+          <span className="font-logo text-lg text-white/40">Noted</span>
           <p className="text-xs text-white/30">
             Built by Mario A. Esquivel III
           </p>

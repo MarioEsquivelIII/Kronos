@@ -1,10 +1,10 @@
 import type { CalendarEvent } from "./events";
 
 /** sessionStorage key — home writes current events so account merge can read them */
-export const EVENTS_SNAPSHOT_KEY = "kronos_events_snapshot";
+export const EVENTS_SNAPSHOT_KEY = "noted_events_snapshot";
 
 /** sessionStorage key — account writes final import; home applies once then clears */
-export const GCAL_IMPORT_KEY = "kronos_gcal_import";
+export const GCAL_IMPORT_KEY = "noted_gcal_import";
 
 export type RangePreset = "this_week" | "30d" | "3m" | "all" | "custom";
 
@@ -198,18 +198,18 @@ export function eventsOverlapSameDay(a: CalendarEvent, b: CalendarEvent): boolea
 
 export interface ConflictRow {
   rowId: string;
-  kronos: CalendarEvent;
+  noted: CalendarEvent;
   google: CalendarEvent;
 }
 
-export function findConflictRows(kronosEvents: CalendarEvent[], googleEvents: CalendarEvent[]): ConflictRow[] {
+export function findConflictRows(notedEvents: CalendarEvent[], googleEvents: CalendarEvent[]): ConflictRow[] {
   const rows: ConflictRow[] = [];
   for (const g of googleEvents) {
-    for (const k of kronosEvents) {
+    for (const k of notedEvents) {
       if (eventsOverlapSameDay(k, g)) {
         rows.push({
           rowId: `${k.id}__${g.id}`,
-          kronos: k,
+          noted: k,
           google: g,
         });
       }
@@ -218,7 +218,7 @@ export function findConflictRows(kronosEvents: CalendarEvent[], googleEvents: Ca
   return rows;
 }
 
-export type ConflictResolution = "keep_kronos" | "use_google" | "keep_both";
+export type ConflictResolution = "keep_noted" | "use_google" | "keep_both";
 
 export function applyMergeWithResolutions(
   existing: CalendarEvent[],
@@ -227,23 +227,23 @@ export function applyMergeWithResolutions(
   resolutions: Map<string, ConflictResolution>
 ): CalendarEvent[] {
   const conflictGoogleIds = new Set(conflictRows.map((r) => r.google.id));
-  const removeKronosIds = new Set<string>();
+  const removeNotedIds = new Set<string>();
   const addGoogleIds = new Set<string>();
 
   for (const row of conflictRows) {
     const res = resolutions.get(row.rowId);
     if (!res) continue;
-    if (res === "keep_kronos") {
+    if (res === "keep_noted") {
       /* skip adding this google via conflict handling */
     } else if (res === "use_google") {
-      removeKronosIds.add(row.kronos.id);
+      removeNotedIds.add(row.noted.id);
       addGoogleIds.add(row.google.id);
     } else if (res === "keep_both") {
       addGoogleIds.add(row.google.id);
     }
   }
 
-  let result = existing.filter((e) => !removeKronosIds.has(e.id));
+  let result = existing.filter((e) => !removeNotedIds.has(e.id));
   const googleById = new Map(incoming.map((g) => [g.id, g]));
 
   for (const id of addGoogleIds) {

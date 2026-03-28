@@ -1,8 +1,10 @@
-# Kronos
+# Noted
 
-**Describe your schedule. Kronos builds it.**
+**You mention it. Noted builds it.**
 
-Kronos is an AI-powered calendar builder that turns natural-language descriptions into structured, editable weekly calendars. Instead of manually creating every time block, you describe the schedule you want and Kronos generates it for you. You can then visually edit the calendar, refine it with follow-up prompts, and sync with Google Calendar.
+Noted is an AI-powered calendar companion: when you have an idea, you mention it to the chat — it hears you out, updates your calendar, and your answer is *Noted.* That’s the name.
+
+It turns natural-language descriptions into structured, editable weekly calendars. Instead of manually creating every time block, you describe the schedule you want and Noted generates it for you. You can then visually edit the calendar, refine it with follow-up prompts, and sync with Google Calendar.
 
 ---
 
@@ -28,7 +30,7 @@ Kronos is an AI-powered calendar builder that turns natural-language description
 
 > Make me a weekly schedule for college. I have classes Monday and Wednesday from 10 AM to 2 PM, want to study 2 hours a day, go to the gym 4 times a week, keep Fridays lighter, and sleep by midnight.
 
-Kronos converts that into a structured weekly calendar inside the app.
+Noted converts that into a structured weekly calendar inside the app.
 
 ---
 
@@ -131,6 +133,8 @@ Kronos/
 ├── tsconfig.json
 └── postcss.config.mjs
 ```
+
+*(The repository folder may still be named `Kronos` on disk; the product name is **Noted**.)*
 
 ---
 
