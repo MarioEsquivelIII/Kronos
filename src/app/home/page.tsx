@@ -16,6 +16,7 @@ import { ChatMessage } from "@/lib/chat";
 import { useTheme } from "@/lib/theme";
 import { User } from "@supabase/supabase-js";
 
+const NOTED_FEEDBACK_FORM_URL = "https://forms.gle/SsLmAmPGHRCwnewL7";
 
 export default function HomePage() {
   const router = useRouter();
@@ -440,6 +441,28 @@ export default function HomePage() {
               >
                 Go to Overview
               </button>
+            </div>
+
+            {/* Feedback */}
+            <div className="glass-card rounded-2xl p-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>Send feedback</h2>
+                <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
+                  Tell us what you think about the UI, the chat, or what you wish your calendar could do — it helps a lot.
+                </p>
+              </div>
+              <a
+                href={NOTED_FEEDBACK_FORM_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center px-6 py-2.5 rounded-full text-sm font-medium whitespace-nowrap border transition-all hover:bg-white/10"
+                style={{ borderColor: "var(--accent)", color: "var(--text-primary)" }}
+              >
+                Open feedback form
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="ml-2 opacity-70" aria-hidden>
+                  <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </a>
             </div>
           </div>
         </main>
