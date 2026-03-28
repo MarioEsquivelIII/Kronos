@@ -2,7 +2,7 @@
 
 **You name it. Noted builds it.**
 
-Noted is an AI-powered calendar companion: when you have an idea, you mention it to the chat — it hears you out, updates your calendar, and your answer is *Noted.* That’s the name.
+Noted is an AI-powered calendar builder: when you have an idea, you mention it to the chat — it hears you out, updates your calendar, and your answer is *Noted.* That’s the name.
 
 It turns natural-language descriptions into structured, editable weekly calendars. Instead of manually creating every time block, you describe the schedule you want and Noted generates it for you. You can then visually edit the calendar, refine it with follow-up prompts, and sync with Google Calendar.
 
