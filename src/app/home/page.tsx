@@ -3,7 +3,6 @@
 import { useState, useEffect, useLayoutEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
-import { motion, AnimatePresence } from "framer-motion";
 import ComingUp from "@/components/ComingUp";
 import WeekCalendar from "@/components/WeekCalendar";
 import ChatBar from "@/components/ChatBar";
@@ -16,6 +15,7 @@ import { ChatMessage } from "@/lib/chat";
 import { useTheme } from "@/lib/theme";
 import { User } from "@supabase/supabase-js";
 
+const NOTED_FEEDBACK_FORM_URL = "https://forms.gle/SsLmAmPGHRCwnewL7";
 
 export default function HomePage() {
   const router = useRouter();
@@ -31,7 +31,6 @@ export default function HomePage() {
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [detailPanel, setDetailPanel] = useState<{ event: CalendarEvent; x: number; y: number } | null>(null);
   const [chatMode, setChatMode] = useState<"collapsed" | "floating" | "sidebar" | "fullscreen">("collapsed");
-  const [hoveredTab, setHoveredTab] = useState<string | null>(null);
   const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
@@ -210,20 +209,11 @@ export default function HomePage() {
   const greetHour = new Date().getHours();
   const greeting = greetHour < 12 ? "Good morning" : greetHour < 18 ? "Good afternoon" : "Good evening";
 
-  const tabs: { key: typeof view; label: string; megaMenu?: boolean }[] = [
-    { key: "home", label: "Home", megaMenu: true },
+  const tabs: { key: typeof view; label: string }[] = [
+    { key: "home", label: "Home" },
     { key: "overview", label: "Overview" },
     { key: "calendar", label: "Calendar" },
   ];
-
-  const megaMenuContent: Record<string, { title: string; desc: string }[]> = {
-    home: [
-      { title: "Getting Started", desc: "Learn how to describe your schedule and let Noted build it." },
-      { title: "Photo-to-Calendar", desc: "Upload a photo and watch it become calendar events." },
-      { title: "Voice Input", desc: "Speak your schedule hands-free with the mic button." },
-      { title: "Google Calendar Sync", desc: "Import and merge events from your Google account." },
-    ],
-  };
 
   return (
     <div className="min-h-screen bg-sky-gradient relative">
@@ -234,52 +224,21 @@ export default function HomePage() {
             <span className="font-logo text-xl" style={{ color: "var(--text-primary)" }}>Noted</span>
           </div>
 
-          {/* View toggle — pill switcher with mega-menu */}
+          {/* View toggle — pill switcher */}
           <div className="flex items-center gap-0.5 rounded-full p-1 bg-white/5 border border-white/10">
             {tabs.map((tab) => (
-              <div
+              <button
                 key={tab.key}
-                className="relative"
-                onMouseEnter={() => tab.megaMenu && setHoveredTab(tab.key)}
-                onMouseLeave={() => setHoveredTab(null)}
+                type="button"
+                onClick={() => setView(tab.key)}
+                className="px-4 py-1.5 rounded-full text-[12px] font-medium transition-all"
+                style={{
+                  background: view === tab.key ? "var(--accent)" : "transparent",
+                  color: view === tab.key ? "white" : "var(--text-muted)",
+                }}
               >
-                <button
-                  onClick={() => setView(tab.key)}
-                  className="px-4 py-1.5 rounded-full text-[12px] font-medium transition-all"
-                  style={{
-                    background: view === tab.key ? "var(--accent)" : "transparent",
-                    color: view === tab.key ? "white" : "var(--text-muted)",
-                  }}
-                >
-                  {tab.label}
-                </button>
-
-                {/* Mega-menu dropdown */}
-                <AnimatePresence>
-                  {hoveredTab === tab.key && megaMenuContent[tab.key] && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 8, scale: 0.96 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 8, scale: 0.96 }}
-                      transition={{ duration: 0.2, ease: "easeOut" }}
-                      className="absolute top-full left-1/2 -translate-x-1/2 mt-3 w-80 rounded-3xl bg-white/90 dark:bg-white/10 backdrop-blur-2xl border border-white/20 shadow-2xl shadow-black/10 p-5 z-50"
-                    >
-                      <div className="grid gap-3">
-                        {megaMenuContent[tab.key].map((item) => (
-                          <button
-                            key={item.title}
-                            onClick={() => { setView(tab.key); setHoveredTab(null); }}
-                            className="text-left p-3 rounded-xl hover:bg-white/20 transition-colors group"
-                          >
-                            <p className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>{item.title}</p>
-                            <p className="text-xs mt-0.5" style={{ color: "var(--text-secondary)" }}>{item.desc}</p>
-                          </button>
-                        ))}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+                {tab.label}
+              </button>
             ))}
           </div>
 
@@ -440,6 +399,28 @@ export default function HomePage() {
               >
                 Go to Overview
               </button>
+            </div>
+
+            {/* Feedback */}
+            <div className="glass-card rounded-2xl p-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>Send feedback</h2>
+                <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
+                  Tell us what you think about the UI, the chat, or what you wish your calendar could do — it helps a lot.
+                </p>
+              </div>
+              <a
+                href={NOTED_FEEDBACK_FORM_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center px-6 py-2.5 rounded-full text-sm font-medium whitespace-nowrap border transition-all hover:bg-white/10"
+                style={{ borderColor: "var(--accent)", color: "var(--text-primary)" }}
+              >
+                Open feedback form
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="ml-2 opacity-70" aria-hidden>
+                  <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </a>
             </div>
           </div>
         </main>
