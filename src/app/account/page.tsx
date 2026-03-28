@@ -6,6 +6,7 @@ import { createClient } from "@/utils/supabase/client";
 import GoogleCalendarSyncFlow from "@/components/GoogleCalendarSyncFlow";
 import type { CalendarEvent } from "@/lib/events";
 import { GCAL_IMPORT_KEY } from "@/lib/gcalSync";
+import { getSiteOrigin } from "@/lib/publicUrl";
 
 export default function AccountPage() {
   const router = useRouter();
@@ -107,7 +108,7 @@ export default function AccountPage() {
       setGcalOAuthError("Sign in with your account (not guest mode) to connect Google Calendar.");
       return;
     }
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const origin = getSiteOrigin();
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",

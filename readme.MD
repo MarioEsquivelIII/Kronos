@@ -111,7 +111,7 @@ Kronos/
 │   │   ├── forgot-password/page.tsx # Password reset request
 │   │   ├── reset-password/page.tsx  # Set new password
 │   │   ├── account/page.tsx         # Profile, theme toggle, Google Calendar sync
-│   │   └── auth/callback/route.ts   # Supabase OAuth callback
+│   │   └── auth/callback/page.tsx   # Supabase OAuth callback (client)
 │   ├── components/
 │   │   ├── WeekCalendar.tsx         # Week/day/month grid with drag/resize/create
 │   │   ├── ComingUp.tsx             # Upcoming events list (home view)
@@ -135,6 +135,97 @@ Kronos/
 ```
 
 *(The repository folder may still be named `Kronos` on disk; the product name is **Noted**.)*
+
+---
+
+## Deploying to Vercel
+
+[Vercel](https://vercel.com) is the recommended host for this Next.js app: **API routes**, **middleware**, and **server-side auth** all work without the static-export limits of GitHub Pages.
+
+### 1. Create a project
+
+1. Push your repo to GitHub (or GitLab / Bitbucket).
+2. In [Vercel](https://vercel.com/dashboard) → **Add New… → Project** → import the repository.
+
+### 2. Set the app root (important)
+
+This repo keeps the Next.js app inside the **`Kronos/`** folder. In the import screen, open **Root Directory** → **Edit** → set it to **`Kronos`** (not the repo root).  
+If you skip this, builds will fail because `package.json` lives under `Kronos/`.
+
+### 3. Configure build
+
+- **Framework Preset:** Next.js (auto-detected).
+- **Build Command:** `npm run build` (default).
+- **Output:** Next.js default (no `output: 'export'`).
+
+Do **not** set `STATIC_EXPORT` on Vercel. Leave **`NEXT_PUBLIC_BASE_PATH`** unset unless you deliberately serve the app under a subpath.
+
+### 4. Environment variables
+
+In **Project → Settings → Environment Variables**, add:
+
+| Name | Value | Environments |
+|------|--------|----------------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | Production, Preview, Development |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/public key | All |
+| `OPENAI_API_KEY` | OpenAI API key (for `/api/chat`) | Production, Preview, Development |
+
+Redeploy after saving variables (**Deployments → … → Redeploy**), or trigger a new deploy from a commit.
+
+### 5. Supabase auth URLs
+
+In **Supabase → Authentication → URL configuration**:
+
+- **Site URL:** your production Vercel URL, e.g. `https://your-project.vercel.app` (or your custom domain).
+- **Redirect URLs:** include at least:
+  - `https://your-project.vercel.app/auth/callback`
+  - `http://localhost:3000/auth/callback` (local dev)
+  - Optional: `https://your-project-*.vercel.app/**` for **Preview** deployments (wildcard preview URLs), or add each preview URL as needed.
+
+### 6. Google OAuth (optional)
+
+If you use Google sign-in / Calendar: in **Google Cloud Console** OAuth client, **Authorized redirect URIs** must still include Supabase’s callback, e.g. `https://<project-ref>.supabase.co/auth/v1/callback` (unchanged). Your **app** URL on Vercel must be allowed in **Supabase** redirect URLs as above.
+
+### 7. Deploy
+
+Commit and push to your default branch, or click **Deploy** in the dashboard. Production URL: `https://<project>.vercel.app`.
+
+---
+
+## Deploying to GitHub Pages
+
+The repo includes a workflow (`.github/workflows/deploy-github-pages.yml`) that builds a **static export** from the `Kronos/` directory and publishes it with **GitHub Actions**.
+
+### One-time setup
+
+1. In the GitHub repo: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+2. In **Settings → Secrets and variables → Actions**, add repository secrets:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - *(optional)* `NEXT_PUBLIC_CHAT_API_URL` — full URL to a hosted chat API (see below). If omitted, the chat UI will call `/api/chat`, which **does not exist** on GitHub Pages static hosting.
+
+3. In **Supabase → Authentication → URL configuration**, add the site URL and redirect URLs, e.g.  
+   `https://<user>.github.io/<repo>/` and  
+   `https://<user>.github.io/<repo>/auth/callback`  
+   (For a **user/org site** whose repo is named `<name>.github.io`, the path has **no** extra `/repo` segment.)
+
+4. Push to `main` (or run the workflow manually). The site appears at `https://<user>.github.io/<repo>/`.
+
+### AI chat on static hosting
+
+Static export **cannot** run `src/app/api/chat`. Options:
+
+- Deploy the same app (or only the API route) on **Vercel** / another host and set `NEXT_PUBLIC_CHAT_API_URL` to that `/api/chat` URL, **or**
+- Run `npm run dev` / `npm run build` + `npm start` locally or on Vercel for full stack (recommended for full features).
+
+### Local static build
+
+```bash
+cd Kronos
+NEXT_PUBLIC_BASE_PATH=/your-repo-name npm run build:gh-pages
+```
+
+Output is in `out/`. Use `NEXT_PUBLIC_BASE_PATH=` (empty) for a site root at `username.github.io`.
 
 ---
 

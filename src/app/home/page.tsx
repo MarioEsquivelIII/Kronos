@@ -11,6 +11,7 @@ import EditEventModal from "@/components/EditEventModal";
 import EventDetailPanel from "@/components/EventDetailPanel";
 import { CalendarEvent, sampleEvents, generateId } from "@/lib/events";
 import { EVENTS_SNAPSHOT_KEY, GCAL_IMPORT_KEY } from "@/lib/gcalSync";
+import { getChatApiUrl } from "@/lib/chatApiUrl";
 import { ChatMessage } from "@/lib/chat";
 import { useTheme } from "@/lib/theme";
 import { User } from "@supabase/supabase-js";
@@ -121,7 +122,7 @@ export default function HomePage() {
     setChatLoading(true);
 
     try {
-      const res = await fetch("/api/chat", {
+      const res = await fetch(getChatApiUrl(), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: content, events, imageBase64, today: new Date().toISOString().split("T")[0] }),
