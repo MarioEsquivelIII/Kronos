@@ -3,23 +3,33 @@
 /* ===== DARK THEME (default) ===== */
 :root,
 [data-theme="dark"] {
-  --bg-primary: #191919;
-  --bg-secondary: #212121;
-  --bg-tertiary: #282828;
-  --bg-hover: #2f2f2f;
-  --bg-surface: #1e1e1e;
-  --text-primary: #ececec;
-  --text-secondary: #a0a0a0;
-  --text-muted: #5c5c5c;
+  --bg-primary: #0c0e1a;
+  --bg-secondary: #141728;
+  --bg-tertiary: #1a1e35;
+  --bg-hover: #222845;
+  --bg-surface: #111427;
+  --text-primary: #e4e6f0;
+  --text-secondary: #8b90a8;
+  --text-muted: #4a4f6b;
   --accent: #7c9e6c;
   --accent-hover: #8db07c;
-  --border-color: #2a2a2a;
-  --border-subtle: #242424;
-  --card-bg: #1e1e1e;
-  --overlay-bg: rgba(0, 0, 0, 0.6);
+  --border-color: #1e2240;
+  --border-subtle: #181c36;
+  --card-bg: #141728;
+  --overlay-bg: rgba(6, 8, 18, 0.7);
   --grid-line: rgba(255, 255, 255, 0.04);
   --grid-line-strong: rgba(255, 255, 255, 0.07);
   --now-line: #e06050;
+
+  /* Glass effect tokens */
+  --glass-bg: rgba(20, 23, 40, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-highlight: rgba(255, 255, 255, 0.04);
+
+  /* Sky gradient */
+  --sky-from: #0c0e1a;
+  --sky-via: #151a38;
+  --sky-to: #1a1230;
 
   /* Event palette — tinted glass look */
   --ev-green-bg: rgba(124, 158, 108, 0.14);
@@ -44,23 +54,31 @@
 
 /* ===== LIGHT THEME ===== */
 [data-theme="light"] {
-  --bg-primary: #f7f7f5;
+  --bg-primary: #f0f2f8;
   --bg-secondary: #ffffff;
-  --bg-tertiary: #f0efed;
-  --bg-hover: #e9e8e6;
+  --bg-tertiary: #e8eaf4;
+  --bg-hover: #dde0ee;
   --bg-surface: #ffffff;
-  --text-primary: #1a1a1a;
-  --text-secondary: #6b6b6b;
-  --text-muted: #a0a0a0;
+  --text-primary: #1a1a2e;
+  --text-secondary: #5a5e7a;
+  --text-muted: #9498b0;
   --accent: #5a7a4c;
   --accent-hover: #6a8a5c;
-  --border-color: #e6e5e3;
-  --border-subtle: #eeeeec;
+  --border-color: #d4d8e8;
+  --border-subtle: #e0e4f0;
   --card-bg: #ffffff;
   --overlay-bg: rgba(0, 0, 0, 0.25);
   --grid-line: rgba(0, 0, 0, 0.05);
   --grid-line-strong: rgba(0, 0, 0, 0.08);
   --now-line: #d94535;
+
+  --glass-bg: rgba(255, 255, 255, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.7);
+  --glass-highlight: rgba(255, 255, 255, 0.5);
+
+  --sky-from: #e8ecf8;
+  --sky-via: #d8ddf5;
+  --sky-to: #e4ddf0;
 
   --ev-green-bg: rgba(90, 122, 76, 0.1);
   --ev-green-border: #5a7a4c;
@@ -97,7 +115,7 @@ body {
   background: var(--bg-primary);
   color: var(--text-primary);
   font-family: var(--font-body), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  transition: background 0.2s ease, color 0.2s ease;
+  transition: background 0.3s ease, color 0.3s ease;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -106,6 +124,101 @@ body {
 h1, h2, h3, .font-heading {
   font-family: var(--font-heading), Georgia, 'Times New Roman', serif;
   letter-spacing: -0.01em;
+}
+
+/* Logo font */
+.font-logo {
+  font-family: var(--font-logo), 'Pacifico', cursive;
+}
+
+/* Sky gradient background (app pages) */
+.bg-sky-gradient {
+  background: linear-gradient(
+    180deg,
+    var(--sky-from) 0%,
+    var(--sky-via) 40%,
+    var(--sky-to) 100%
+  );
+}
+
+/* Bright sky gradient (landing page — air.inc style) */
+.bg-bright-sky {
+  background: linear-gradient(
+    180deg,
+    #4da0ff 0%,
+    #5aadff 25%,
+    #6bb8ff 50%,
+    #8ec8f8 75%,
+    #b8ddf8 100%
+  );
+}
+
+/* Glass text — frosted 3D bubble look */
+.glass-text {
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow:
+    0 0 80px rgba(255, 255, 255, 0.35),
+    0 0 40px rgba(255, 255, 255, 0.2),
+    0 4px 12px rgba(0, 80, 180, 0.15);
+  -webkit-text-stroke: 1px rgba(255, 255, 255, 0.25);
+  filter: drop-shadow(0 2px 8px rgba(0, 60, 160, 0.12));
+}
+
+/* Liquid glass navbar */
+.liquid-glass-nav {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(24px) saturate(1.8);
+  -webkit-backdrop-filter: blur(24px) saturate(1.8);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.06);
+}
+
+/* Glass card effect */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 var(--glass-highlight);
+}
+
+/* Frosted navbar */
+.glass-nav {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+/* Gentle float animation */
+@keyframes gentle-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.animate-float {
+  animation: gentle-float 3s ease-in-out infinite;
+}
+
+/* Cloud drift animation */
+@keyframes cloud-drift {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(60px); }
+}
+
+@keyframes cloud-drift-slow {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(40px); }
+}
+
+.animate-cloud {
+  animation: cloud-drift 20s ease-in-out infinite alternate;
+}
+
+.animate-cloud-slow {
+  animation: cloud-drift-slow 30s ease-in-out infinite alternate;
 }
 
 /* Scrollbar styling */

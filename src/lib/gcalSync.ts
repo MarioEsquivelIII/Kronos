@@ -35,48 +35,91 @@ function toHHMM(d: Date): string {
   return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 }
 
+/** Parse a single Google event into one or more CalendarEvents (multi-day events produce one per day). */
 export function parseGoogleEventToCalendarEvent(raw: GcalApiEvent): CalendarEvent | null {
+  const results = parseGoogleEventToCalendarEvents(raw);
+  return results.length > 0 ? results[0] : null;
+}
+
+export function parseGoogleEventToCalendarEvents(raw: GcalApiEvent): CalendarEvent[] {
   const gid = raw.id?.trim();
-  if (!gid || raw.status === "cancelled") return null;
+  if (!gid || raw.status === "cancelled") return [];
 
   const summary = raw.summary?.trim() || "(No title)";
   const start = raw.start;
   const end = raw.end;
-  if (!start) return null;
+  if (!start) return [];
 
+  // All-day events: Google uses date (not dateTime) and end date is exclusive
   if (start.date && !start.dateTime) {
-    const date = start.date.slice(0, 10);
-    return {
-      id: `gcal_${gid}`,
-      title: summary,
-      date,
-      startTime: "00:00",
-      endTime: "23:59",
-      color: "blue",
-      allDay: true,
-    };
+    const startDate = new Date(start.date + "T00:00:00");
+    const endDate = end?.date ? new Date(end.date + "T00:00:00") : new Date(startDate.getTime() + 86400000);
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return [];
+
+    const events: CalendarEvent[] = [];
+    const cursor = new Date(startDate);
+    while (cursor < endDate) {
+      const dayStr = toYyyyMmDd(cursor);
+      events.push({
+        id: events.length === 0 ? `gcal_${gid}` : `gcal_${gid}_${dayStr}`,
+        title: summary,
+        date: dayStr,
+        startTime: "00:00",
+        endTime: "23:59",
+        color: "blue",
+        allDay: true,
+      });
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    return events;
   }
 
+  // Timed events
   if (start.dateTime) {
     const s = new Date(start.dateTime);
     const e = end?.dateTime ? new Date(end.dateTime) : new Date(s.getTime() + 3600000);
-    if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return null;
+    if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return [];
 
-    const date = toYyyyMmDd(s);
+    const startDate = toYyyyMmDd(s);
     const endDate = toYyyyMmDd(e);
-    const endTime = endDate !== date ? "23:59" : toHHMM(e);
 
-    return {
-      id: `gcal_${gid}`,
-      title: summary,
-      date,
-      startTime: toHHMM(s),
-      endTime,
-      color: "blue",
-    };
+    // Single-day event
+    if (startDate === endDate) {
+      return [{
+        id: `gcal_${gid}`,
+        title: summary,
+        date: startDate,
+        startTime: toHHMM(s),
+        endTime: toHHMM(e),
+        color: "blue",
+      }];
+    }
+
+    // Multi-day timed event: split into one entry per day
+    const events: CalendarEvent[] = [];
+    const cursor = new Date(s);
+    cursor.setHours(0, 0, 0, 0);
+    const endDay = new Date(e);
+    endDay.setHours(0, 0, 0, 0);
+
+    while (cursor <= endDay) {
+      const dayStr = toYyyyMmDd(cursor);
+      const isFirst = dayStr === startDate;
+      const isLast = dayStr === endDate;
+      events.push({
+        id: isFirst ? `gcal_${gid}` : `gcal_${gid}_${dayStr}`,
+        title: summary,
+        date: dayStr,
+        startTime: isFirst ? toHHMM(s) : "00:00",
+        endTime: isLast ? toHHMM(e) : "23:59",
+        color: "blue",
+      });
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    return events;
   }
 
-  return null;
+  return [];
 }
 
 export function startOfWeekSundayLocal(d: Date): Date {
@@ -104,32 +147,37 @@ export function rangeToRFC3339Bounds(preset: RangePreset, customStart?: string, 
     return { timeMin: s.toISOString(), timeMax: e.toISOString() };
   }
 
-  const timeMin = now.toISOString();
-
   if (preset === "this_week") {
+    const start = startOfWeekSundayLocal(now);
     const end = endOfWeekSaturdayLocal(now);
-    return { timeMin, timeMax: end.toISOString() };
+    return { timeMin: start.toISOString(), timeMax: end.toISOString() };
   }
 
   if (preset === "30d") {
+    const start = new Date(now);
+    start.setHours(0, 0, 0, 0);
     const end = new Date(now);
     end.setDate(end.getDate() + 30);
     end.setHours(23, 59, 59, 999);
-    return { timeMin, timeMax: end.toISOString() };
+    return { timeMin: start.toISOString(), timeMax: end.toISOString() };
   }
 
   if (preset === "3m") {
+    const start = new Date(now);
+    start.setHours(0, 0, 0, 0);
     const end = new Date(now);
     end.setMonth(end.getMonth() + 3);
     end.setHours(23, 59, 59, 999);
-    return { timeMin, timeMax: end.toISOString() };
+    return { timeMin: start.toISOString(), timeMax: end.toISOString() };
   }
 
-  // all upcoming — cap at 2y to satisfy API sanity
+  // all upcoming — start from today, cap at 2y
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
   const end = new Date(now);
   end.setFullYear(end.getFullYear() + 2);
   end.setHours(23, 59, 59, 999);
-  return { timeMin, timeMax: end.toISOString() };
+  return { timeMin: start.toISOString(), timeMax: end.toISOString() };
 }
 
 function eventMinutesOnDate(e: CalendarEvent): { startM: number; endM: number } {
@@ -217,12 +265,78 @@ export function applyMergeWithResolutions(
   });
 }
 
-export async function fetchGoogleCalendarEvents(accessToken: string, timeMin: string, timeMax: string): Promise<CalendarEvent[]> {
+export interface GcalCalendarEntry {
+  id: string;
+  name: string;
+  backgroundColor: string;
+}
+
+interface GcalCalendarListRawEntry {
+  id?: string;
+  summary?: string;
+  summaryOverride?: string;
+  backgroundColor?: string;
+  selected?: boolean;
+  accessRole?: string;
+}
+
+interface GcalCalendarListResponse {
+  items?: GcalCalendarListRawEntry[];
+  nextPageToken?: string;
+  error?: { message?: string; code?: number };
+}
+
+/** Fetch the full list of calendars on the user's account with name and color. */
+export async function fetchCalendarList(accessToken: string): Promise<GcalCalendarEntry[]> {
+  const calendars: GcalCalendarEntry[] = [];
+  let pageToken: string | undefined;
+
+  do {
+    const url = new URL("https://www.googleapis.com/calendar/v3/users/me/calendarList");
+    url.searchParams.set("maxResults", "100");
+    if (pageToken) url.searchParams.set("pageToken", pageToken);
+
+    const res = await fetch(url.toString(), {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    let body: GcalCalendarListResponse;
+    try {
+      body = (await res.json()) as GcalCalendarListResponse;
+    } catch {
+      break;
+    }
+
+    if (!res.ok) break;
+
+    for (const cal of body.items || []) {
+      if (cal.id) {
+        calendars.push({
+          id: cal.id,
+          name: cal.summaryOverride || cal.summary || cal.id,
+          backgroundColor: cal.backgroundColor || "#4285F4",
+        });
+      }
+    }
+
+    pageToken = body.nextPageToken;
+  } while (pageToken);
+
+  return calendars.length > 0 ? calendars : [{ id: "primary", name: "Primary", backgroundColor: "#4285F4" }];
+}
+
+/** Fetch events from a single calendar. */
+async function fetchEventsFromCalendar(
+  accessToken: string,
+  calendarId: string,
+  timeMin: string,
+  timeMax: string,
+): Promise<CalendarEvent[]> {
   const collected: CalendarEvent[] = [];
   let pageToken: string | undefined;
 
   do {
-    const url = new URL("https://www.googleapis.com/calendar/v3/calendars/primary/events");
+    const url = new URL(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`);
     url.searchParams.set("timeMin", timeMin);
     url.searchParams.set("timeMax", timeMax);
     url.searchParams.set("singleEvents", "true");
@@ -238,23 +352,43 @@ export async function fetchGoogleCalendarEvents(accessToken: string, timeMin: st
     try {
       body = (await res.json()) as GcalListResponse;
     } catch {
-      throw new Error(res.statusText || "Invalid response from Google Calendar");
+      // Skip this calendar on parse failure
+      break;
     }
 
     if (!res.ok) {
-      const msg = body.error?.message || res.statusText || "Google Calendar request failed";
-      throw new Error(msg);
+      // Skip calendars that error (e.g. permission denied) rather than failing the whole sync
+      break;
     }
 
     for (const item of body.items || []) {
-      const ev = parseGoogleEventToCalendarEvent(item);
-      if (ev) collected.push(ev);
+      const evs = parseGoogleEventToCalendarEvents(item);
+      for (const ev of evs) collected.push(ev);
     }
 
     pageToken = body.nextPageToken;
   } while (pageToken);
 
   return collected;
+}
+
+export async function fetchGoogleCalendarEvents(accessToken: string, timeMin: string, timeMax: string, calendarIds?: string[]): Promise<CalendarEvent[]> {
+  const ids = calendarIds && calendarIds.length > 0 ? calendarIds : ["primary"];
+
+  // Fetch selected calendars in parallel
+  const results = await Promise.all(
+    ids.map((id) => fetchEventsFromCalendar(accessToken, id, timeMin, timeMax))
+  );
+
+  const all = results.flat();
+
+  // Deduplicate by event id (same event can appear in multiple calendar views)
+  const seen = new Set<string>();
+  return all.filter((e) => {
+    if (seen.has(e.id)) return false;
+    seen.add(e.id);
+    return true;
+  });
 }
 
 export function readEventsSnapshot(): CalendarEvent[] {

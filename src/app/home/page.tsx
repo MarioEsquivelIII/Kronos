@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect, useLayoutEffect, useCallback } from "react";
+import { useState, useEffect, useLayoutEffect, useCallback, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
+import { motion, AnimatePresence } from "framer-motion";
+import dynamic from "next/dynamic";
 import ComingUp from "@/components/ComingUp";
 import WeekCalendar from "@/components/WeekCalendar";
 import ChatBar from "@/components/ChatBar";
@@ -15,6 +17,8 @@ import { ChatMessage } from "@/lib/chat";
 import { useTheme } from "@/lib/theme";
 import { User } from "@supabase/supabase-js";
 
+const LiquidHero = dynamic(() => import("@/components/LiquidHero"), { ssr: false });
+
 export default function HomePage() {
   const router = useRouter();
   const supabase = createClient();
@@ -24,17 +28,17 @@ export default function HomePage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chatExpanded, setChatExpanded] = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
-  const [view, setView] = useState<"home" | "calendar">("home");
+  const [view, setView] = useState<"home" | "overview" | "calendar">("overview");
   const [contextMenu, setContextMenu] = useState<{ event: CalendarEvent; x: number; y: number } | null>(null);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [detailPanel, setDetailPanel] = useState<{ event: CalendarEvent; x: number; y: number } | null>(null);
   const [chatMode, setChatMode] = useState<"collapsed" | "floating" | "sidebar" | "fullscreen">("collapsed");
+  const [hoveredTab, setHoveredTab] = useState<string | null>(null);
   const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) {
-        // Fallback: check localStorage for non-Supabase auth
         const stored = localStorage.getItem("kronos_user");
         if (stored) {
           const parsed = JSON.parse(stored);
@@ -129,7 +133,6 @@ export default function HomePage() {
       const data = await res.json();
       let responseText = data.response || data.error || "Sorry, something went wrong.";
 
-      // Parse action blocks — try multiple formats
       const jsonPatterns = [
         /```json\s*([\s\S]*?)```/,
         /```\s*([\s\S]*?\{"actions"[\s\S]*?)```/,
@@ -157,11 +160,9 @@ export default function HomePage() {
 
           for (const action of parsed.actions) {
             if (action.type === "delete") {
-              // Delete by ID or by title match
               if (action.id) {
                 updated = updated.filter((e) => e.id !== action.id);
               } else if (action.title) {
-                // Fuzzy match by title for moves
                 const titleLower = action.title.toLowerCase();
                 const dateFilter = action.date;
                 updated = updated.filter((e) => {
@@ -206,56 +207,96 @@ export default function HomePage() {
     }
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    localStorage.removeItem("kronos_user");
-    router.push("/login");
-  };
-
   if (!user && !displayName) return null;
 
+  const greetHour = new Date().getHours();
+  const greeting = greetHour < 12 ? "Good morning" : greetHour < 18 ? "Good afternoon" : "Good evening";
+
+  const tabs: { key: typeof view; label: string; megaMenu?: boolean }[] = [
+    { key: "home", label: "Home", megaMenu: true },
+    { key: "overview", label: "Overview" },
+    { key: "calendar", label: "Calendar" },
+  ];
+
+  const megaMenuContent: Record<string, { title: string; desc: string }[]> = {
+    home: [
+      { title: "Getting Started", desc: "Learn how to describe your schedule and let Kronos build it." },
+      { title: "Photo-to-Calendar", desc: "Upload a photo and watch it become calendar events." },
+      { title: "Voice Input", desc: "Speak your schedule hands-free with the mic button." },
+      { title: "Google Calendar Sync", desc: "Import and merge events from your Google account." },
+    ],
+  };
+
   return (
-    <div className="min-h-screen" style={{ background: "var(--bg-primary)" }}>
-      {/* Top nav */}
-      <header className="sticky top-0 z-40 backdrop-blur-lg" style={{ background: "color-mix(in srgb, var(--bg-primary) 85%, transparent)", borderBottom: "1px solid var(--border-color)" }}>
-        <div className="px-4 h-12 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="flex items-center justify-center w-7 h-7 rounded-md" style={{ background: "var(--accent)" }}>
-              <svg width="16" height="16" viewBox="0 0 32 32" fill="none">
-                <path d="M8 6 L16 2 L24 6 L24 18 L16 26 L8 18Z" fill="white" opacity="0.9"/>
-                <path d="M16 10 L22 14 L22 22 L16 26 L10 22 L10 14Z" fill="white" opacity="0.5"/>
-              </svg>
-            </div>
-            <span className="text-[14px] font-semibold tracking-tight" style={{ color: "var(--text-primary)" }}>Kronos</span>
+    <div className="min-h-screen bg-sky-gradient relative">
+      {/* 3D Liquid Glass Background */}
+      <Suspense fallback={null}>
+        <LiquidHero />
+      </Suspense>
+
+      {/* Floating glass navigation */}
+      <header className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-4xl">
+        <nav className="rounded-full px-5 h-14 flex items-center justify-between bg-white/10 backdrop-blur-md border border-white/20 shadow-lg shadow-black/5">
+          <div className="flex items-center gap-3">
+            <span className="font-logo text-xl" style={{ color: "var(--text-primary)" }}>Kronos</span>
           </div>
 
-          {/* View toggle */}
-          <div className="flex items-center gap-0.5 rounded-lg p-0.5" style={{ background: "var(--bg-tertiary)" }}>
-            <button
-              onClick={() => setView("home")}
-              className="px-3.5 py-1 rounded-md text-[12px] font-medium transition-colors"
-              style={{ background: view === "home" ? "var(--bg-secondary)" : "transparent", color: view === "home" ? "var(--text-primary)" : "var(--text-muted)", boxShadow: view === "home" ? "0 1px 2px rgba(0,0,0,0.1)" : "none" }}
-            >
-              Home
-            </button>
-            <button
-              onClick={() => setView("calendar")}
-              className="px-3.5 py-1 rounded-md text-[12px] font-medium transition-colors"
-              style={{ background: view === "calendar" ? "var(--bg-secondary)" : "transparent", color: view === "calendar" ? "var(--text-primary)" : "var(--text-muted)", boxShadow: view === "calendar" ? "0 1px 2px rgba(0,0,0,0.1)" : "none" }}
-            >
-              Calendar
-            </button>
+          {/* View toggle — pill switcher with mega-menu */}
+          <div className="flex items-center gap-0.5 rounded-full p-1 bg-white/5 border border-white/10">
+            {tabs.map((tab) => (
+              <div
+                key={tab.key}
+                className="relative"
+                onMouseEnter={() => tab.megaMenu && setHoveredTab(tab.key)}
+                onMouseLeave={() => setHoveredTab(null)}
+              >
+                <button
+                  onClick={() => setView(tab.key)}
+                  className="px-4 py-1.5 rounded-full text-[12px] font-medium transition-all"
+                  style={{
+                    background: view === tab.key ? "var(--accent)" : "transparent",
+                    color: view === tab.key ? "white" : "var(--text-muted)",
+                  }}
+                >
+                  {tab.label}
+                </button>
+
+                {/* Mega-menu dropdown */}
+                <AnimatePresence>
+                  {hoveredTab === tab.key && megaMenuContent[tab.key] && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                      transition={{ duration: 0.2, ease: "easeOut" }}
+                      className="absolute top-full left-1/2 -translate-x-1/2 mt-3 w-80 rounded-3xl bg-white/90 dark:bg-white/10 backdrop-blur-2xl border border-white/20 shadow-2xl shadow-black/10 p-5 z-50"
+                    >
+                      <div className="grid gap-3">
+                        {megaMenuContent[tab.key].map((item) => (
+                          <button
+                            key={item.title}
+                            onClick={() => { setView(tab.key); setHoveredTab(null); }}
+                            className="text-left p-3 rounded-xl hover:bg-white/20 transition-colors group"
+                          >
+                            <p className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>{item.title}</p>
+                            <p className="text-xs mt-0.5" style={{ color: "var(--text-secondary)" }}>{item.desc}</p>
+                          </button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            ))}
           </div>
 
-          {/* User menu + theme toggle */}
-          <div className="flex items-center gap-1.5">
+          {/* Right actions */}
+          <div className="flex items-center gap-2">
             <button
               onClick={toggleTheme}
-              className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
+              className="w-8 h-8 rounded-full flex items-center justify-center transition-colors hover:bg-white/10"
               style={{ color: "var(--text-muted)" }}
               title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-              onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-hover)"}
-              onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
             >
               {theme === "dark" ? (
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -269,9 +310,7 @@ export default function HomePage() {
             </button>
             <button
               onClick={() => router.push("/account")}
-              className="w-8 h-8 rounded-full flex items-center justify-center transition-colors overflow-hidden"
-              onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-hover)"}
-              onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+              className="w-8 h-8 rounded-full flex items-center justify-center transition-colors overflow-hidden hover:bg-white/10"
             >
               {user?.user_metadata?.avatar_url ? (
                 <img src={user.user_metadata.avatar_url} alt="" className="w-7 h-7 rounded-full" />
@@ -282,35 +321,169 @@ export default function HomePage() {
               )}
             </button>
           </div>
-        </div>
+        </nav>
       </header>
 
-      {/* Main content */}
-      {view === "home" ? (
-        <main className={`pt-8 transition-all ${chatExpanded && chatMode !== "sidebar" ? "pb-[58vh]" : "pb-16"} ${chatMode === "sidebar" ? "mr-100" : ""}`}>
-          <div className="space-y-8">
-            {/* Greeting */}
-            <div className="max-w-2xl mx-auto px-4">
-              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+      {/* ========== HOME TAB — About Kronos ========== */}
+      {view === "home" && (
+        <main className={`pt-24 pb-20 relative z-10 transition-all ${chatMode === "sidebar" ? "mr-100" : ""}`}>
+          <div className="max-w-3xl mx-auto px-5 space-y-16">
+            {/* Hero welcome */}
+            <div className="text-center pt-8">
+              <span className="font-logo text-5xl md:text-6xl glass-text" style={{ color: "var(--accent)" }}>Kronos</span>
+              <p className="text-lg mt-4" style={{ color: "var(--text-secondary)" }}>
+                Your AI-powered calendar. Describe your schedule — Kronos builds it.
               </p>
-              <h1 className="text-xl font-semibold mt-1" style={{ color: "var(--text-primary)" }}>
-                Good {new Date().getHours() < 12 ? "morning" : new Date().getHours() < 18 ? "afternoon" : "evening"}, {displayName}
-              </h1>
+            </div>
+
+            {/* Quick start */}
+            <div className="glass-card rounded-2xl p-8">
+              <h2 className="text-lg font-semibold mb-4" style={{ color: "var(--text-primary)" }}>Getting started</h2>
+              <div className="space-y-4">
+                {[
+                  { num: "1", title: "Open the chat", desc: "Click the chat bar at the bottom and describe your ideal week in plain language." },
+                  { num: "2", title: "Watch it appear", desc: "Kronos creates your events instantly. Switch to the Calendar tab to see your schedule." },
+                  { num: "3", title: "Refine as you go", desc: "Ask Kronos to move, add, or remove events. Or drag and resize them directly on the calendar." },
+                ].map((step) => (
+                  <div key={step.num} className="flex gap-4 items-start">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold text-white flex-shrink-0" style={{ background: "var(--accent)" }}>
+                      {step.num}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>{step.title}</p>
+                      <p className="text-sm mt-0.5" style={{ color: "var(--text-secondary)" }}>{step.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Features grid */}
+            <div>
+              <h2 className="text-lg font-semibold mb-5" style={{ color: "var(--text-primary)" }}>What Kronos can do</h2>
+              <div className="grid md:grid-cols-2 gap-4">
+                {[
+                  {
+                    title: "Natural language scheduling",
+                    desc: "Say \"gym every weekday at 6am\" or \"study 2 hours after dinner\" — Kronos figures out the rest.",
+                    icon: (
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                      </svg>
+                    ),
+                  },
+                  {
+                    title: "Photo-to-calendar",
+                    desc: "Upload a photo of a class schedule, meeting agenda, or handwritten plan. It becomes events.",
+                    icon: (
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" />
+                      </svg>
+                    ),
+                  },
+                  {
+                    title: "Voice input",
+                    desc: "Tap the mic and speak. Kronos transcribes and processes your schedule hands-free.",
+                    icon: (
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" /><path d="M19 10v2a7 7 0 01-14 0v-2" />
+                      </svg>
+                    ),
+                  },
+                  {
+                    title: "Google Calendar sync",
+                    desc: "Import events from Google Calendar. Choose which calendars, merge or overwrite, resolve conflicts.",
+                    icon: (
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17 1l4 4-4 4" /><path d="M3 11V9a4 4 0 014-4h14" /><path d="M7 23l-4-4 4-4" /><path d="M21 13v2a4 4 0 01-4 4H3" />
+                      </svg>
+                    ),
+                  },
+                  {
+                    title: "Drag, resize, edit",
+                    desc: "Switch to the Calendar tab to visually move events, adjust times, or click to edit details.",
+                    icon: (
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+                      </svg>
+                    ),
+                  },
+                  {
+                    title: "Recurring events",
+                    desc: "\"Gym every weekday for 4 weeks\" — Kronos expands recurring requests into individual events.",
+                    icon: (
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" /><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
+                      </svg>
+                    ),
+                  },
+                ].map((feature) => (
+                  <div key={feature.title} className="glass-card rounded-xl p-5">
+                    <div className="flex items-start gap-3">
+                      <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(124,158,108,0.12)" }}>
+                        {feature.icon}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>{feature.title}</p>
+                        <p className="text-xs mt-1 leading-relaxed" style={{ color: "var(--text-secondary)" }}>{feature.desc}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Try it prompt */}
+            <div className="glass-card rounded-2xl p-8 text-center">
+              <p className="text-lg font-medium mb-2" style={{ color: "var(--text-primary)" }}>Try saying this in the chat:</p>
+              <p className="text-sm italic mb-5" style={{ color: "var(--text-secondary)" }}>
+                &ldquo;Make me a weekly schedule for college. I have classes Monday and Wednesday from 10 AM to 2 PM,
+                want to study 2 hours a day, go to the gym 4 times a week, keep Fridays lighter, and sleep by midnight.&rdquo;
+              </p>
+              <button
+                onClick={() => setView("overview")}
+                className="px-6 py-2.5 rounded-full text-sm font-medium text-white transition-all hover:scale-[1.02]"
+                style={{ background: "var(--accent)" }}
+              >
+                Go to Overview
+              </button>
+            </div>
+          </div>
+        </main>
+      )}
+
+      {/* ========== OVERVIEW TAB — Greeting + Coming Up ========== */}
+      {view === "overview" && (
+        <main className={`pt-24 relative z-10 transition-all ${chatExpanded && chatMode !== "sidebar" ? "pb-[58vh]" : "pb-20"} ${chatMode === "sidebar" ? "mr-100" : ""}`}>
+          <div className="space-y-10">
+            <div className="max-w-2xl mx-auto px-5">
+              <div className="glass-card rounded-2xl p-6">
+                <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                  {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+                </p>
+                <h1 className="text-2xl font-semibold mt-1" style={{ color: "var(--text-primary)" }}>
+                  {greeting}, {displayName}
+                </h1>
+              </div>
             </div>
 
             <ComingUp events={events} onContextMenu={handleContextMenu} />
           </div>
         </main>
-      ) : (
-        <div className={`flex flex-col transition-all ${chatMode === "sidebar" ? "mr-100" : ""}`} style={{ height: "calc(100vh - 48px)" }}>
-          <WeekCalendar
-            events={events}
-            onContextMenu={handleContextMenu}
-            onAddEvent={handleAddEvent}
-            onClickEvent={handleClickEvent}
-            onUpdateEvent={handleSaveEvent}
-          />
+      )}
+
+      {/* ========== CALENDAR TAB ========== */}
+      {view === "calendar" && (
+        <div className={`flex flex-col pt-20 relative z-10 transition-all ${chatMode === "sidebar" ? "mr-100" : ""}`} style={{ height: "100vh" }}>
+          <div className="flex-1 mx-4 mb-4 glass-card rounded-2xl overflow-hidden">
+            <WeekCalendar
+              events={events}
+              onContextMenu={handleContextMenu}
+              onAddEvent={handleAddEvent}
+              onClickEvent={handleClickEvent}
+              onUpdateEvent={handleSaveEvent}
+            />
+          </div>
         </div>
       )}
 
