@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect, useLayoutEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useLayoutEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
-import dynamic from "next/dynamic";
 import ComingUp from "@/components/ComingUp";
 import WeekCalendar from "@/components/WeekCalendar";
 import ChatBar from "@/components/ChatBar";
@@ -17,7 +16,6 @@ import { ChatMessage } from "@/lib/chat";
 import { useTheme } from "@/lib/theme";
 import { User } from "@supabase/supabase-js";
 
-const LiquidHero = dynamic(() => import("@/components/LiquidHero"), { ssr: false });
 
 export default function HomePage() {
   const router = useRouter();
@@ -229,11 +227,6 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-sky-gradient relative">
-      {/* 3D Liquid Glass Background */}
-      <Suspense fallback={null}>
-        <LiquidHero />
-      </Suspense>
-
       {/* Floating glass navigation */}
       <header className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-4xl">
         <nav className="rounded-full px-5 h-14 flex items-center justify-between bg-white/10 backdrop-blur-md border border-white/20 shadow-lg shadow-black/5">

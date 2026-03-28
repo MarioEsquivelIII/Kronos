@@ -113,7 +113,7 @@ export default function LandingPage() {
             y: logoY,
             rotate: logoRotate,
             opacity: logoOpacity,
-            top: "42vh",
+            top: "32vh",
             left: "50%",
             x: "-50%",
           }}
@@ -145,7 +145,7 @@ export default function LandingPage() {
             onClick={handleCTA}
             className="px-8 py-3.5 rounded-full text-base font-medium bg-white text-[#2a6dcc] hover:bg-white/90 transition-all hover:scale-105 shadow-lg"
           >
-            {isAuthed ? "Open Kronos" : "Get some Kronos"}
+            Open Kronos
           </button>
         </motion.div>
 
