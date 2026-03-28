@@ -7,14 +7,16 @@ import {
   type RangePreset,
   rangeToRFC3339Bounds,
   fetchGoogleCalendarEvents,
+  fetchCalendarList,
   findConflictRows,
   applyMergeWithResolutions,
   readEventsSnapshot,
+  type GcalCalendarEntry,
   type ConflictRow,
   type ConflictResolution,
 } from "@/lib/gcalSync";
 
-type Step = "range" | "fetching" | "fetch_error" | "strategy" | "conflicts";
+type Step = "range" | "loading_calendars" | "calendars" | "fetching" | "fetch_error" | "strategy" | "conflicts";
 
 interface GoogleCalendarSyncFlowProps {
   open: boolean;
@@ -38,6 +40,8 @@ export default function GoogleCalendarSyncFlow({
   const [conflictRows, setConflictRows] = useState<ConflictRow[]>([]);
   const [resolutions, setResolutions] = useState<Record<string, ConflictResolution>>({});
   const [lastBounds, setLastBounds] = useState<{ timeMin: string; timeMax: string } | null>(null);
+  const [availableCalendars, setAvailableCalendars] = useState<GcalCalendarEntry[]>([]);
+  const [selectedCalendarIds, setSelectedCalendarIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!open) return;
@@ -47,6 +51,8 @@ export default function GoogleCalendarSyncFlow({
     setConflictRows([]);
     setResolutions({});
     setLastBounds(null);
+    setAvailableCalendars([]);
+    setSelectedCalendarIds(new Set());
     const t = new Date();
     const endDefault = new Date(t);
     endDefault.setDate(endDefault.getDate() + 30);
@@ -73,16 +79,53 @@ export default function GoogleCalendarSyncFlow({
     }
 
     setLastBounds(bounds);
+    setStep("loading_calendars");
+
+    try {
+      const calendars = await fetchCalendarList(accessToken);
+      setAvailableCalendars(calendars);
+      setSelectedCalendarIds(new Set(calendars.map((c) => c.id)));
+      setStep("calendars");
+    } catch (e) {
+      setFetchError(e instanceof Error ? e.message : "Failed to load calendar list.");
+      setStep("fetch_error");
+    }
+  };
+
+  const fetchSelectedEvents = async () => {
+    if (selectedCalendarIds.size === 0 || !lastBounds) return;
     setStep("fetching");
 
     try {
-      const events = await fetchGoogleCalendarEvents(accessToken, bounds.timeMin, bounds.timeMax);
+      const events = await fetchGoogleCalendarEvents(
+        accessToken,
+        lastBounds.timeMin,
+        lastBounds.timeMax,
+        Array.from(selectedCalendarIds),
+      );
       setFetched(events);
       setStep("strategy");
     } catch (e) {
       setFetchError(e instanceof Error ? e.message : "Failed to load calendar.");
       setStep("fetch_error");
     }
+  };
+
+  const toggleCalendar = (id: string) => {
+    setSelectedCalendarIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAllCalendars = () => {
+    setSelectedCalendarIds(new Set(availableCalendars.map((c) => c.id)));
+  };
+
+  const deselectAllCalendars = () => {
+    setSelectedCalendarIds(new Set());
   };
 
   const handleOverwrite = () => {
@@ -197,6 +240,75 @@ export default function GoogleCalendarSyncFlow({
           </div>
         )}
 
+        {step === "loading_calendars" && (
+          <div className="p-10 flex flex-col items-center gap-3">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#5a8a4a] border-t-transparent" />
+            <p className="text-sm text-[#999]">Loading your calendars…</p>
+          </div>
+        )}
+
+        {step === "calendars" && (
+          <div className="p-6 space-y-4">
+            <h3 className="text-sm font-semibold text-[#e8e8e8]">Select calendars</h3>
+            <p className="text-xs text-[#888]">Choose which Google Calendars to import events from.</p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={selectAllCalendars}
+                className="rounded-md px-2.5 py-1 text-[10px] font-medium bg-[#2a2a2a] text-[#aaa] border border-[#333] hover:border-[#5a8a4a]"
+              >
+                Select All
+              </button>
+              <button
+                type="button"
+                onClick={deselectAllCalendars}
+                className="rounded-md px-2.5 py-1 text-[10px] font-medium bg-[#2a2a2a] text-[#aaa] border border-[#333] hover:border-[#5a8a4a]"
+              >
+                Deselect All
+              </button>
+            </div>
+            <ul className="space-y-1 max-h-60 overflow-y-auto">
+              {availableCalendars.map((cal) => {
+                const checked = selectedCalendarIds.has(cal.id);
+                return (
+                  <li key={cal.id}>
+                    <label className="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer hover:bg-[#2a2a2a] transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleCalendar(cal.id)}
+                        className="accent-[#5a8a4a] w-3.5 h-3.5"
+                      />
+                      <span
+                        className="w-3 h-3 rounded-full shrink-0"
+                        style={{ backgroundColor: cal.backgroundColor }}
+                      />
+                      <span className="text-sm text-[#e8e8e8] truncate">{cal.name}</span>
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setStep("range")}
+                className="rounded-lg border border-[#333] bg-[#2a2a2a] px-4 py-2 text-xs text-[#ccc] hover:bg-[#333]"
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                disabled={selectedCalendarIds.size === 0}
+                onClick={fetchSelectedEvents}
+                className="rounded-lg bg-[#5a8a4a] px-4 py-2 text-xs font-medium text-white hover:bg-[#6a9a5a] disabled:opacity-40"
+              >
+                Import {selectedCalendarIds.size} calendar{selectedCalendarIds.size === 1 ? "" : "s"}
+              </button>
+            </div>
+          </div>
+        )}
+
         {step === "fetching" && (
           <div className="p-10 flex flex-col items-center gap-3">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#5a8a4a] border-t-transparent" />
@@ -234,7 +346,8 @@ export default function GoogleCalendarSyncFlow({
                   setStep("fetching");
                   setFetchError(null);
                   try {
-                    const events = await fetchGoogleCalendarEvents(accessToken, lastBounds.timeMin, lastBounds.timeMax);
+                    const ids = selectedCalendarIds.size > 0 ? Array.from(selectedCalendarIds) : undefined;
+                    const events = await fetchGoogleCalendarEvents(accessToken, lastBounds.timeMin, lastBounds.timeMax, ids);
                     setFetched(events);
                     setStep("strategy");
                   } catch (e) {

@@ -2,22 +2,25 @@
 
 **Describe your schedule. Kronos builds it.**
 
-Kronos is an AI-powered calendar builder that turns user-provided natural-language descriptions into structured, editable weekly calendars directly inside the application.
-
-Instead of manually creating every time block yourself, you describe the schedule you want, and Kronos generates it for you. You can then visually edit the calendar, refine it with another prompt, and save it for later.
+Kronos is an AI-powered calendar builder that turns natural-language descriptions into structured, editable weekly calendars. Instead of manually creating every time block, you describe the schedule you want and Kronos generates it for you. You can then visually edit the calendar, refine it with follow-up prompts, and sync with Google Calendar.
 
 ---
 
 ## Features
 
 - Generate weekly calendars from natural-language descriptions
-- Visual in-app weekly calendar view
-- Drag, resize, edit, and delete events
-- Add events manually
-- Refine an existing calendar with follow-up prompts
-- Save and reopen calendars
-- Secure authentication with Supabase
-- Structured AI schedule generation with validation
+- Upload an image of a schedule or timetable and have it converted to events
+- Voice input via Web Speech API
+- Visual weekly, daily, and monthly calendar views
+- Drag-to-create, drag-to-move, and resize events
+- Inline event editing with a detail panel and edit modal
+- Right-click context menu for quick event actions
+- Follow-up chat prompts to add, move, or remove events without starting over
+- Recurring event support (e.g. "gym every weekday for 4 weeks")
+- Google Calendar import with conflict resolution (merge or overwrite)
+- Light and dark theme
+- Secure authentication with Supabase (email/password and Google OAuth)
+- Guest fallback via localStorage when no Supabase session exists
 
 ---
 
@@ -31,35 +34,24 @@ Kronos converts that into a structured weekly calendar inside the app.
 
 ## Tech Stack
 
-### Frontend
-- Next.js
-- React
-- TypeScript
-- Tailwind CSS
-
-### Backend
-- Next.js API routes / server actions
-
-### Database / Auth
-- Supabase PostgreSQL
-- Supabase Auth
-
-### AI
-- OpenAI or Anthropic
-- Structured JSON output
-- Zod validation for model responses
+| Layer | Tool |
+|---|---|
+| Framework | Next.js 16 (App Router), React 19, TypeScript 5 |
+| Styling | Tailwind CSS 4 |
+| Auth | Supabase (`@supabase/supabase-js`, `@supabase/ssr`) |
+| AI | OpenAI SDK — `gpt-4o-mini` (text), `gpt-4o` (image input) |
+| State | React `useState` in-memory + `sessionStorage` |
 
 ---
 
 ## How It Works
 
-1. The user enters a natural-language description of the schedule they want.
-2. Kronos sends the request to the backend.
-3. The backend calls the LLM and asks it to return structured calendar event JSON.
-4. The response is validated.
-5. The calendar and events are saved to the database.
-6. The weekly schedule is rendered visually in the app.
-7. The user can manually edit events or refine the schedule with another prompt.
+1. The user enters a natural-language description or uploads a schedule image.
+2. The request is sent to the Next.js API route with the current event context.
+3. The API route calls OpenAI and returns structured JSON calendar actions.
+4. The frontend parses the actions (add, delete, recurring) and updates the calendar.
+5. The weekly schedule is rendered visually in the app.
+6. The user can manually edit events or refine the schedule with another prompt.
 
 ---
 
@@ -68,8 +60,8 @@ Kronos converts that into a structured weekly calendar inside the app.
 ### Prerequisites
 
 - [Node.js](https://nodejs.org/) (v18 or later)
-- A [Supabase](https://supabase.com/) project (for database and auth)
-- An [OpenAI](https://platform.openai.com/) or [Anthropic](https://console.anthropic.com/) API key
+- A [Supabase](https://supabase.com/) project (for authentication)
+- An [OpenAI](https://platform.openai.com/) API key
 
 ### Installation
 
@@ -86,19 +78,15 @@ Kronos converts that into a structured weekly calendar inside the app.
    npm install
    ```
 
-3. Create a `.env` file in the project root with the following variables:
+3. Create a `.env` file in the project root:
 
    ```env
    NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-   AI_PROVIDER=openai
    OPENAI_API_KEY=your_openai_api_key
-   OPENAI_MODEL=gpt-4o
    ```
 
-4. Set up the database by running the SQL in `supabase/schema.sql` against your Supabase project.
-
-5. Start the development server:
+4. Start the development server:
 
    ```bash
    npm run dev
@@ -110,22 +98,61 @@ Kronos converts that into a structured weekly calendar inside the app.
 
 ## Project Structure
 
-```bash
-KRONOS/
+```
+Kronos/
 ├── src/
-├── supabase/
-│   └── schema.sql
-├── .env
-├── .env.example
-├── .gitignore
-├── next.config.ts
+│   ├── app/
+│   │   ├── api/chat/route.ts        # OpenAI API route (AI layer)
+│   │   ├── home/page.tsx            # Main experience: events state lives here
+│   │   ├── login/page.tsx           # Email/password + Google OAuth sign-in
+│   │   ├── signup/page.tsx          # Registration with email verification
+│   │   ├── forgot-password/page.tsx # Password reset request
+│   │   ├── reset-password/page.tsx  # Set new password
+│   │   ├── account/page.tsx         # Profile, theme toggle, Google Calendar sync
+│   │   └── auth/callback/route.ts   # Supabase OAuth callback
+│   ├── components/
+│   │   ├── WeekCalendar.tsx         # Week/day/month grid with drag/resize/create
+│   │   ├── ComingUp.tsx             # Upcoming events list (home view)
+│   │   ├── ChatBar.tsx              # Expandable chat UI with voice + image input
+│   │   ├── EditEventModal.tsx       # Event editing modal
+│   │   ├── EventContextMenu.tsx     # Right-click event actions
+│   │   ├── EventDetailPanel.tsx     # Notion-style inline event editor
+│   │   └── GoogleCalendarSyncFlow.tsx # Multi-step Google Calendar import dialog
+│   ├── lib/
+│   │   ├── events.ts               # CalendarEvent type + sample data
+│   │   ├── chat.ts                  # Chat types + offline parse helpers
+│   │   ├── gcalSync.ts             # Google Calendar fetch, parse, conflict resolution
+│   │   └── theme.tsx               # Light/dark theme provider
+│   ├── middleware.ts                # Supabase session refresh + route guards
+│   └── utils/supabase/             # Supabase client/server/middleware helpers
+├── public/
 ├── package.json
-├── tailwind.config.ts
-└── tsconfig.json
+├── next.config.ts
+├── tsconfig.json
+└── postcss.config.mjs
+```
 
-Validation and Reliability AI responses are validated before being saved or rendered. 
-This helps ensure: correct JSON structure valid times required fields are present safer rendering in the UI 
+---
 
-Future Improvements Google Calendar integration smarter conflict resolution recurring habit templates reminders and notifications mobile optimization schedule analytics multi-calendar support Security Notes Do not commit .env Keep API keys private Use Supabase row-level security to protect user data License This project is for educational and prototype purposes unless otherwise specified. 
+## Current Limitations
 
-Author Built by Mario A. Esquivel III.
+| Area | Status |
+|---|---|
+| Event persistence | In-memory + sessionStorage only. No database storage for events yet. |
+| Google Calendar sync | Import flow is built; requires OAuth token from Supabase Google provider. |
+| Recurring events | Supported via AI chat (expanded to individual events), no native recurrence rules. |
+| Mobile optimization | Not yet optimized for mobile viewports. |
+
+---
+
+## Security Notes
+
+- Do not commit `.env` — it is included in `.gitignore`.
+- Keep API keys private.
+- Supabase handles auth; the app falls back to localStorage for guest sessions.
+
+---
+
+## Author
+
+Built by Mario A. Esquivel III.

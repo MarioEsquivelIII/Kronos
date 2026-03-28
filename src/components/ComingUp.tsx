@@ -25,16 +25,25 @@ export default function ComingUp({ events, onContextMenu }: ComingUpProps) {
   });
 
   return (
-    <div className="w-full max-w-2xl mx-auto px-4">
+    <div className="w-full max-w-2xl mx-auto px-5">
       <h2 className="text-xl font-medium mb-5" style={{ color: "var(--text-primary)" }}>Coming up</h2>
 
-      <div className="space-y-1">
+      <div className="space-y-2">
         {datesWithEvents.map((date) => {
           const dayEvents = getEventsForDate(events, date);
           const today = isToday(date);
 
           return (
-            <div key={date} className="rounded-xl px-5 py-4 transition-colors" style={{ background: today ? "var(--bg-secondary)" : "transparent" }}>
+            <div
+              key={date}
+              className="rounded-2xl px-5 py-4 transition-colors"
+              style={{
+                background: today ? "var(--glass-bg)" : "transparent",
+                backdropFilter: today ? "blur(12px)" : "none",
+                WebkitBackdropFilter: today ? "blur(12px)" : "none",
+                border: today ? "1px solid var(--glass-border)" : "1px solid transparent",
+              }}
+            >
               {/* Date row */}
               <div className="flex items-center gap-3 mb-2">
                 <div
@@ -65,7 +74,7 @@ export default function ComingUp({ events, onContextMenu }: ComingUpProps) {
                     <div
                       key={event.id}
                       onContextMenu={(e) => { e.preventDefault(); onContextMenu(event, e.clientX, e.clientY); }}
-                      className="flex items-center gap-3 px-3 py-2 -mx-3 rounded-lg cursor-default transition-colors"
+                      className="flex items-center gap-3 px-3 py-2 -mx-3 rounded-xl cursor-default transition-colors"
                       onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-hover)"}
                       onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
                     >

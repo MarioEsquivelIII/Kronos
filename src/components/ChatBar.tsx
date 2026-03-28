@@ -90,13 +90,11 @@ export default function ChatBar({ messages, onSendMessage, isExpanded, onToggleE
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Wrap setMode to notify parent
   const updateMode = useCallback((newMode: ChatMode) => {
     setMode(newMode);
     onModeChange?.(newMode);
   }, [onModeChange]);
 
-  // Click-outside-to-collapse for floating and sidebar modes
   useEffect(() => {
     if (mode !== "floating" && mode !== "sidebar") return;
 
@@ -111,7 +109,6 @@ export default function ChatBar({ messages, onSendMessage, isExpanded, onToggleE
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [mode, isExpanded, onToggleExpand, updateMode]);
 
-  // Voice input
   const startListening = useCallback(() => {
     const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognitionAPI) {
@@ -157,7 +154,6 @@ export default function ChatBar({ messages, onSendMessage, isExpanded, onToggleE
     recognition.start();
     setIsListening(true);
 
-    // Auto-expand chat when voice starts
     if (mode === "collapsed") {
       updateMode("floating");
       if (!isExpanded) onToggleExpand();
@@ -167,7 +163,6 @@ export default function ChatBar({ messages, onSendMessage, isExpanded, onToggleE
   const stopListening = useCallback(() => {
     recognitionRef.current?.stop();
     setIsListening(false);
-    // If there's text, auto-send it
     if (input.trim() || interimTranscript.trim()) {
       const fullText = input + interimTranscript;
       if (fullText.trim()) {
@@ -194,7 +189,6 @@ export default function ChatBar({ messages, onSendMessage, isExpanded, onToggleE
     if (mode !== "collapsed") inputRef.current?.focus();
   }, [mode]);
 
-  // Sync external expand state
   useEffect(() => {
     if (isExpanded && mode === "collapsed") updateMode("floating");
     if (!isExpanded && mode !== "collapsed") updateMode("collapsed");
@@ -212,7 +206,6 @@ export default function ChatBar({ messages, onSendMessage, isExpanded, onToggleE
     setImagePreview(null);
   };
 
-  // Paste image handler (Cmd+V)
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     const items = e.clipboardData?.items;
     if (!items) return;
@@ -268,9 +261,9 @@ export default function ChatBar({ messages, onSendMessage, isExpanded, onToggleE
     setShowChips(false);
   };
 
-  // Shared input box component
+  // Shared input box
   const renderInputBox = () => (
-    <div className="rounded-xl overflow-hidden transition-colors" style={{ background: "var(--bg-secondary)", border: "1px solid var(--border-color)" }}>
+    <div className="glass-card rounded-xl overflow-hidden">
       <div className="flex items-center gap-2 px-3 pt-2">
         <span className="text-xs font-medium" style={{ color: "var(--text-primary)" }}>My calendar</span>
         <span className="text-xs" style={{ color: "var(--text-muted)" }}>All events</span>
@@ -291,19 +284,19 @@ export default function ChatBar({ messages, onSendMessage, isExpanded, onToggleE
       <div className="flex items-center justify-between px-3 pb-2">
         <div className="flex items-center gap-1">
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-          <button type="button" onClick={() => fileInputRef.current?.click()} className="p-1.5 rounded-md transition-colors" title="Upload image (schedule, screenshot)" onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-hover)"} onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
+          <button type="button" onClick={() => fileInputRef.current?.click()} className="p-1.5 rounded-lg transition-colors" title="Upload image" onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-hover)"} onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" /></svg>
           </button>
-          <button type="button" className="p-1.5 rounded-md transition-colors" title="Settings" onClick={() => openMode(mode === "sidebar" ? "floating" : "sidebar")} onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-hover)"} onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
+          <button type="button" className="p-1.5 rounded-lg transition-colors" title="Settings" onClick={() => openMode(mode === "sidebar" ? "floating" : "sidebar")} onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-hover)"} onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
           </button>
         </div>
         <div className="flex items-center gap-1">
-          <button type="button" onClick={toggleVoice} className={`p-2 rounded-full transition-all ${isListening ? "bg-[#5a8a4a] animate-pulse" : ""}`} style={!isListening ? { background: "var(--bg-hover)" } : undefined} title={isListening ? "Stop recording (sends message)" : "Voice input"}>
+          <button type="button" onClick={toggleVoice} className={`p-2 rounded-full transition-all ${isListening ? "animate-pulse" : ""}`} style={{ background: isListening ? "var(--accent)" : "var(--bg-hover)" }} title={isListening ? "Stop recording (sends message)" : "Voice input"}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={isListening ? "white" : "var(--text-muted)"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" /><path d="M19 10v2a7 7 0 01-14 0v-2" /><line x1="12" y1="19" x2="12" y2="23" /><line x1="8" y1="23" x2="16" y2="23" /></svg>
           </button>
           <button onClick={handleSubmit} disabled={(!input.trim() && !imagePreview) || isLoading} className="p-2 rounded-full transition-colors disabled:opacity-30" style={{ background: "var(--bg-hover)" }} title="Send">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={input.trim() || imagePreview ? "#5a8a4a" : "var(--text-muted)"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 16V8M8 12l4-4 4 4" /></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={input.trim() || imagePreview ? "var(--accent)" : "var(--text-muted)"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 16V8M8 12l4-4 4 4" /></svg>
           </button>
         </div>
       </div>
@@ -315,12 +308,12 @@ export default function ChatBar({ messages, onSendMessage, isExpanded, onToggleE
       <p className="text-xs mb-3" style={{ color: "var(--text-muted)" }}>Recipes</p>
       <div className="flex flex-wrap gap-2">
         {recipes.map((r) => (
-          <button key={r.label} onClick={() => onSendMessage(r.label)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors" style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-color)", color: "var(--text-secondary)" }}>
+          <button key={r.label} onClick={() => onSendMessage(r.label)} className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs transition-colors" style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)", color: "var(--text-secondary)" }}>
             <div className={`w-3 h-3 rounded ${r.color}`} />
             {r.label}
           </button>
         ))}
-        <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors" style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-color)", color: "var(--text-secondary)" }}>
+        <button className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs transition-colors" style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)", color: "var(--text-secondary)" }}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="5" cy="5" r="2"/><circle cx="12" cy="5" r="2"/><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/></svg>
           All recipes
         </button>
@@ -340,7 +333,7 @@ export default function ChatBar({ messages, onSendMessage, isExpanded, onToggleE
     return (
       <div className="px-4 pt-3">
         <div className="relative inline-block">
-          <img src={imagePreview} alt="Upload preview" className="h-20 rounded-lg" style={{ border: "1px solid var(--border-color)" }} />
+          <img src={imagePreview} alt="Upload preview" className="h-20 rounded-xl" style={{ border: "1px solid var(--glass-border)" }} />
           <button onClick={() => setImagePreview(null)} className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center transition-colors" style={{ background: "var(--bg-hover)" }}>
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--text-primary)" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
@@ -357,14 +350,20 @@ export default function ChatBar({ messages, onSendMessage, isExpanded, onToggleE
     <>
       {messages.map((msg) => (
         <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-          <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm whitespace-pre-wrap ${msg.role === "user" ? "bg-[#5a8a4a] text-white rounded-br-md" : "rounded-bl-md"}`} style={msg.role === "assistant" ? { background: "var(--bg-tertiary)", color: "var(--text-primary)" } : undefined}>
+          <div
+            className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm whitespace-pre-wrap ${msg.role === "user" ? "rounded-br-md text-white" : "rounded-bl-md"}`}
+            style={msg.role === "user"
+              ? { background: "var(--accent)" }
+              : { background: "var(--glass-bg)", backdropFilter: "blur(12px)", border: "1px solid var(--glass-border)", color: "var(--text-primary)" }
+            }
+          >
             {msg.content}
           </div>
         </div>
       ))}
       {isLoading && (
         <div className="flex justify-start">
-          <div className="rounded-2xl rounded-bl-md px-4 py-3" style={{ background: "var(--bg-tertiary)" }}>
+          <div className="rounded-2xl rounded-bl-md px-4 py-3" style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)" }}>
             <div className="flex gap-1.5">
               <div className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: "var(--text-muted)", animationDelay: "0ms" }} />
               <div className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: "var(--text-muted)", animationDelay: "150ms" }} />
@@ -376,7 +375,7 @@ export default function ChatBar({ messages, onSendMessage, isExpanded, onToggleE
       {showFollowUps && (
         <div className="flex flex-wrap gap-2 mt-2">
           {followUpActions.map((action) => (
-            <button key={action} onClick={() => onSendMessage(action)} className="px-3 py-1.5 rounded-full text-xs transition-colors" style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-color)", color: "var(--text-secondary)" }}>
+            <button key={action} onClick={() => onSendMessage(action)} className="px-3 py-1.5 rounded-full text-xs transition-colors" style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)", color: "var(--text-secondary)" }}>
               {action}
             </button>
           ))}
@@ -401,24 +400,19 @@ export default function ChatBar({ messages, onSendMessage, isExpanded, onToggleE
   const renderKronosBackButton = () => (
     <button
       onClick={() => { updateMode("collapsed"); if (isExpanded) onToggleExpand(); }}
-      className="flex items-center gap-2 p-2 rounded-lg transition-colors"
+      className="flex items-center gap-2 p-2 rounded-xl transition-colors"
       title="Back to calendar"
-      onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-tertiary)"}
+      onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-hover)"}
       onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
     >
-      <div className="w-8 h-8 rounded-lg bg-[#5a8a4a] flex items-center justify-center">
-        <svg width="18" height="18" viewBox="0 0 32 32" fill="none">
-          <path d="M8 6 L16 2 L24 6 L24 18 L16 26 L8 18Z" fill="white" opacity="0.9"/>
-          <path d="M16 10 L22 14 L22 22 L16 26 L10 22 L10 14Z" fill="white" opacity="0.5"/>
-        </svg>
-      </div>
+      <span className="font-logo text-lg" style={{ color: "var(--text-primary)" }}>Kronos</span>
     </button>
   );
 
   // ========== FULLSCREEN MODE ==========
   if (mode === "fullscreen") {
     return (
-      <div ref={containerRef} className="fixed inset-0 z-50 flex flex-col" style={{ background: "var(--bg-primary)" }}>
+      <div ref={containerRef} className="fixed inset-0 z-50 flex flex-col bg-sky-gradient">
         <div className="flex items-center px-4 py-3 flex-shrink-0">
           {renderKronosBackButton()}
         </div>
@@ -431,12 +425,12 @@ export default function ChatBar({ messages, onSendMessage, isExpanded, onToggleE
             <div className="flex-1 overflow-y-auto px-4 py-4">
               <div className="max-w-2xl mx-auto space-y-4">{renderMessages()}</div>
             </div>
-            <div className="border-t flex-shrink-0" style={{ borderColor: "var(--border-subtle)", background: "var(--bg-secondary)" }}>
+            <div className="flex-shrink-0 glass-nav">
               {renderImagePreview()}
               <div className="flex items-center gap-2 px-4 pt-2">
                 {activeActions.map((action) => (
-                  <button key={action} onClick={() => onSendMessage(action)} className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] transition-all whitespace-nowrap" style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-color)", color: "var(--text-secondary)" }}>
-                    <div className="w-2.5 h-2.5 rounded bg-[#5a8a4a]/50" />
+                  <button key={action} onClick={() => onSendMessage(action)} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] transition-all whitespace-nowrap" style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)", color: "var(--text-secondary)" }}>
+                    <div className="w-2.5 h-2.5 rounded" style={{ background: "rgba(124,158,108,0.4)" }} />
                     {action}
                   </button>
                 ))}
@@ -460,23 +454,23 @@ export default function ChatBar({ messages, onSendMessage, isExpanded, onToggleE
   // ========== FLOATING / SIDEBAR MODES ==========
   if (mode !== "collapsed") {
     return (
-      <div ref={containerRef} className={containerClass} style={{ background: "var(--bg-primary)", borderColor: "var(--border-color)" }}>
-        <div className="flex items-center justify-between px-4 py-2.5 border-b flex-shrink-0" style={{ borderColor: "var(--border-subtle)", background: "var(--bg-secondary)" }}>
+      <div ref={containerRef} className={containerClass} style={{ background: "var(--bg-primary)", borderColor: "var(--glass-border)" }}>
+        <div className="flex items-center justify-between px-4 py-2.5 flex-shrink-0 glass-nav">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>New chat</span>
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2"><path d="M6 9l6 6 6-6" /></svg>
           </div>
           <div className="flex items-center gap-1">
-            <button onClick={() => setInput("")} className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs transition-colors" style={{ color: "var(--text-secondary)" }} onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-tertiary)"} onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
+            <button onClick={() => setInput("")} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-colors" style={{ color: "var(--text-secondary)" }} onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-hover)"} onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
               New chat
             </button>
             <div className="relative">
-              <button onClick={() => setShowModeMenu(!showModeMenu)} className="p-1.5 rounded-md transition-colors" onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-tertiary)"} onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
+              <button onClick={() => setShowModeMenu(!showModeMenu)} className="p-1.5 rounded-lg transition-colors" onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-hover)"} onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="18" rx="2" /><line x1="9" y1="3" x2="9" y2="21" /></svg>
               </button>
               {showModeMenu && (
-                <div className="absolute right-0 top-full mt-1 w-36 rounded-xl shadow-2xl overflow-hidden z-50" style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-color)" }}>
+                <div className="absolute right-0 top-full mt-1 w-36 rounded-xl shadow-2xl overflow-hidden z-50 glass-card">
                   {[
                     { m: "floating" as ChatMode, label: "Floating", icon: "M2 3h20v18H2z" },
                     { m: "sidebar" as ChatMode, label: "Sidebar", icon: "M2 3h20v18H2zM15 3v18" },
@@ -501,12 +495,12 @@ export default function ChatBar({ messages, onSendMessage, isExpanded, onToggleE
             <div className="flex-1 overflow-y-auto px-4 py-4">
               <div className="max-w-2xl mx-auto space-y-4">{renderMessages()}</div>
             </div>
-            <div className="border-t flex-shrink-0" style={{ borderColor: "var(--border-subtle)", background: "var(--bg-secondary)" }}>
+            <div className="flex-shrink-0 glass-nav">
               {renderImagePreview()}
               <div className="flex items-center gap-2 px-4 pt-2">
                 {activeActions.map((action) => (
-                  <button key={action} onClick={() => onSendMessage(action)} className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] transition-all whitespace-nowrap" style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-color)", color: "var(--text-secondary)" }}>
-                    <div className="w-2.5 h-2.5 rounded bg-[#5a8a4a]/50" />
+                  <button key={action} onClick={() => onSendMessage(action)} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] transition-all whitespace-nowrap" style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)", color: "var(--text-secondary)" }}>
+                    <div className="w-2.5 h-2.5 rounded" style={{ background: "rgba(124,158,108,0.4)" }} />
                     {action}
                   </button>
                 ))}
@@ -525,12 +519,12 @@ export default function ChatBar({ messages, onSendMessage, isExpanded, onToggleE
       <div className={`flex items-center justify-center gap-2 mb-2 transition-all duration-200 ${showChips ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"}`}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
         {activeActions.map((action) => (
-          <button key={action} onClick={() => onSendMessage(action)} className="px-2.5 py-1 rounded-full text-[11px] transition-all whitespace-nowrap backdrop-blur-md" style={{ background: "var(--bg-secondary)", border: "1px solid var(--border-color)", color: "var(--text-secondary)" }}>
+          <button key={action} onClick={() => onSendMessage(action)} className="px-2.5 py-1 rounded-full text-[11px] transition-all whitespace-nowrap glass-card" style={{ color: "var(--text-secondary)" }}>
             {action}
           </button>
         ))}
       </div>
-      <form onSubmit={handleSubmit} className="flex items-center gap-1.5 rounded-full px-3 py-1.5 shadow-lg backdrop-blur-md" style={{ background: "var(--bg-secondary)", border: "1px solid var(--border-color)" }}>
+      <form onSubmit={handleSubmit} className="flex items-center gap-1.5 rounded-full px-3 py-1.5 shadow-lg glass-card">
         <input ref={inputRef} type="text" value={input} onChange={(e) => setInput(e.target.value)} onPaste={handlePaste} placeholder="What do you have planned today?" className="bg-transparent text-sm outline-none w-64" style={{ color: "var(--text-primary)" }} />
         <div className="flex items-center gap-0.5">
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
@@ -540,11 +534,11 @@ export default function ChatBar({ messages, onSendMessage, isExpanded, onToggleE
           <button type="button" onClick={() => { updateMode("floating"); if (!isExpanded) onToggleExpand(); }} className="p-1 rounded-full transition-colors" title="Open chat settings">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
           </button>
-          <button type="button" onClick={toggleVoice} className={`p-1 rounded-full transition-all ${isListening ? "bg-[#5a8a4a] animate-pulse" : ""}`} title={isListening ? "Stop recording" : "Voice input"}>
+          <button type="button" onClick={toggleVoice} className={`p-1 rounded-full transition-all ${isListening ? "animate-pulse" : ""}`} style={{ background: isListening ? "var(--accent)" : "transparent" }} title={isListening ? "Stop recording" : "Voice input"}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={isListening ? "white" : "var(--text-muted)"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" /><path d="M19 10v2a7 7 0 01-14 0v-2" /><line x1="12" y1="19" x2="12" y2="23" /><line x1="8" y1="23" x2="16" y2="23" /></svg>
           </button>
           <button type="submit" disabled={!input.trim() || isLoading} className="p-1 rounded-full transition-colors disabled:opacity-30">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={input.trim() ? "#5a8a4a" : "var(--text-muted)"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 16V8M8 12l4-4 4 4" /></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={input.trim() ? "var(--accent)" : "var(--text-muted)"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 16V8M8 12l4-4 4 4" /></svg>
           </button>
         </div>
       </form>
