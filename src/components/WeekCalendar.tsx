@@ -10,6 +10,7 @@ interface WeekCalendarProps {
   onContextMenu: (event: CalendarEvent, x: number, y: number) => void;
   onAddEvent: (event: CalendarEvent) => void;
   onClickEvent: (event: CalendarEvent, x: number, y: number) => void;
+  onUpdateEvent?: (event: CalendarEvent) => void;
 }
 
 const EVENT_STYLES: Record<string, { bg: string; border: string; text: string }> = {
@@ -27,6 +28,71 @@ const dotColorMap: Record<string, string> = {
 };
 
 const HOUR_HEIGHT = 60;
+
+/* ── Overlap layout (Google Calendar style) ── */
+
+interface OverlapInfo {
+  column: number;
+  totalColumns: number;
+}
+
+function toMinutes(time: string): number {
+  const [h, m] = time.split(":").map(Number);
+  return h * 60 + m;
+}
+
+/** Compute column assignments for overlapping events on a single day. */
+function computeOverlapLayout(dayEvents: CalendarEvent[]): Map<string, OverlapInfo> {
+  const layout = new Map<string, OverlapInfo>();
+  if (dayEvents.length === 0) return layout;
+
+  // Sort by start time, then longer events first
+  const sorted = [...dayEvents].sort((a, b) => {
+    const d = toMinutes(a.startTime) - toMinutes(b.startTime);
+    return d !== 0 ? d : toMinutes(b.endTime) - toMinutes(a.endTime);
+  });
+
+  // Group into overlapping clusters
+  const clusters: CalendarEvent[][] = [];
+  let clusterEnd = 0;
+  let current: CalendarEvent[] = [];
+
+  for (const ev of sorted) {
+    const start = toMinutes(ev.startTime);
+    if (current.length === 0 || start < clusterEnd) {
+      // overlaps with current cluster
+      current.push(ev);
+      clusterEnd = Math.max(clusterEnd, toMinutes(ev.endTime));
+    } else {
+      clusters.push(current);
+      current = [ev];
+      clusterEnd = toMinutes(ev.endTime);
+    }
+  }
+  if (current.length > 0) clusters.push(current);
+
+  // Within each cluster, greedily assign columns
+  for (const cluster of clusters) {
+    const columns: number[] = []; // each entry = end-minute of the event occupying that column
+    for (const ev of cluster) {
+      const start = toMinutes(ev.startTime);
+      let col = 0;
+      while (col < columns.length && columns[col] > start) {
+        col++;
+      }
+      if (col === columns.length) columns.push(0);
+      columns[col] = toMinutes(ev.endTime);
+      layout.set(ev.id, { column: col, totalColumns: 0 });
+    }
+    const total = columns.length;
+    for (const ev of cluster) {
+      const info = layout.get(ev.id)!;
+      info.totalColumns = total;
+    }
+  }
+
+  return layout;
+}
 
 function getMonthGridDates(year: number, month: number): string[] {
   const firstDay = new Date(year, month, 1);
@@ -77,7 +143,7 @@ function useCurrentTime() {
   return now;
 }
 
-export default function WeekCalendar({ events, onContextMenu, onAddEvent, onClickEvent }: WeekCalendarProps) {
+export default function WeekCalendar({ events, onContextMenu, onAddEvent, onClickEvent, onUpdateEvent }: WeekCalendarProps) {
   const [viewMode, setViewMode] = useState<CalendarViewMode>("week");
   const [numDays, setNumDays] = useState(7);
   const [weekOffset, setWeekOffset] = useState(0);
@@ -87,6 +153,11 @@ export default function WeekCalendar({ events, onContextMenu, onAddEvent, onClic
   const [dragDate, setDragDate] = useState<string | null>(null);
   const [dragStartHour, setDragStartHour] = useState<number | null>(null);
   const [dragEndHour, setDragEndHour] = useState<number | null>(null);
+  // Drag-to-move existing events
+  const [movingEvent, setMovingEvent] = useState<CalendarEvent | null>(null);
+  const [moveTargetDate, setMoveTargetDate] = useState<string | null>(null);
+  const [moveTargetMinute, setMoveTargetMinute] = useState<number | null>(null);
+  const [moveDidDrag, setMoveDidDrag] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
   const now = useCurrentTime();
 
@@ -154,11 +225,79 @@ export default function WeekCalendar({ events, onContextMenu, onAddEvent, onClic
     setDragging(false); setDragDate(null); setDragStartHour(null); setDragEndHour(null);
   };
 
+  // --- Drag-to-move handlers ---
+  const handleEventDragStart = (event: CalendarEvent, e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setMovingEvent(event);
+    setMoveTargetDate(event.date);
+    setMoveTargetMinute(toMinutes(event.startTime));
+    setMoveDidDrag(false);
+  };
+
+  const handleCellMouseMoveForDrag = useCallback((date: string, e: React.MouseEvent) => {
+    if (movingEvent) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const yInCell = e.clientY - rect.top;
+      const hour = parseInt(e.currentTarget.getAttribute("data-hour") || "0");
+      // Snap to 15-minute increments
+      const minuteInHour = Math.floor((yInCell / HOUR_HEIGHT) * 60 / 15) * 15;
+      const totalMinute = hour * 60 + Math.max(0, Math.min(minuteInHour, 45));
+      setMoveTargetDate(date);
+      setMoveTargetMinute(totalMinute);
+      setMoveDidDrag(true);
+      return;
+    }
+    // Existing create-drag behavior
+    if (dragging) {
+      const hour = parseInt(e.currentTarget.getAttribute("data-hour") || "0");
+      handleMouseMove(hour);
+    }
+  }, [movingEvent, dragging, handleMouseMove]);
+
+  const handleGlobalMouseUp = useCallback(() => {
+    if (movingEvent && moveTargetDate !== null && moveTargetMinute !== null && moveDidDrag && onUpdateEvent) {
+      const duration = toMinutes(movingEvent.endTime) - toMinutes(movingEvent.startTime);
+      const newStartMinute = moveTargetMinute;
+      const newEndMinute = newStartMinute + duration;
+      const startH = Math.floor(newStartMinute / 60);
+      const startM = newStartMinute % 60;
+      const endH = Math.floor(newEndMinute / 60);
+      const endM = newEndMinute % 60;
+      onUpdateEvent({
+        ...movingEvent,
+        date: moveTargetDate,
+        startTime: `${startH.toString().padStart(2, "0")}:${startM.toString().padStart(2, "0")}`,
+        endTime: `${endH.toString().padStart(2, "0")}:${endM.toString().padStart(2, "0")}`,
+      });
+    }
+    if (movingEvent && !moveDidDrag) {
+      // It was a click, not a drag — do nothing (let onClick handle it)
+    }
+    setMovingEvent(null);
+    setMoveTargetDate(null);
+    setMoveTargetMinute(null);
+    setMoveDidDrag(false);
+  }, [movingEvent, moveTargetDate, moveTargetMinute, moveDidDrag, onUpdateEvent]);
+
+  useEffect(() => {
+    if (movingEvent) {
+      window.addEventListener("mouseup", handleGlobalMouseUp);
+      return () => window.removeEventListener("mouseup", handleGlobalMouseUp);
+    }
+  }, [movingEvent, handleGlobalMouseUp]);
+
   const handlePrev = () => setWeekOffset(weekOffset - 1);
   const handleNext = () => setWeekOffset(weekOffset + 1);
 
   const colTemplate = `56px repeat(${displayDates.length}, 1fr)`;
   const weekdayHeaders = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  // Pre-compute overlap layout once per day (avoids recalculating inside hour loop)
+  const overlapLayouts = new Map<string, Map<string, OverlapInfo>>();
+  for (const date of displayDates) {
+    overlapLayouts.set(date, computeOverlapLayout(getEventsForDate(events, date)));
+  }
 
   // Current time position
   const nowHour = now.getHours();
@@ -321,15 +460,17 @@ export default function WeekCalendar({ events, onContextMenu, onAddEvent, onClic
                   </div>
                   {/* Day cells */}
                   {displayDates.map((date) => {
+                    const overlapLayout = overlapLayouts.get(date)!;
                     const cellEvents = getEventsForDate(events, date).filter((e) => parseInt(e.startTime.split(":")[0]) === hour);
 
                     return (
                       <div
                         key={`${date}-${hour}`}
+                        data-hour={hour}
                         className="h-[60px] relative cursor-crosshair"
                         style={{ borderTop: "1px solid var(--grid-line)", borderLeft: "1px solid var(--grid-line)" }}
-                        onMouseDown={(e) => { if (e.button === 0) handleMouseDown(date, hour); }}
-                        onMouseMove={() => handleMouseMove(hour)}
+                        onMouseDown={(e) => { if (e.button === 0 && !movingEvent) handleMouseDown(date, hour); }}
+                        onMouseMove={(e) => handleCellMouseMoveForDrag(date, e)}
                       >
                         {/* Half-hour line */}
                         <div className="absolute left-0 right-0 top-[30px]" style={{ borderTop: "1px dashed var(--grid-line)" }} />
@@ -347,7 +488,37 @@ export default function WeekCalendar({ events, onContextMenu, onAddEvent, onClic
                           </div>
                         )}
 
-                        {/* Events */}
+                        {/* Drag-to-move ghost preview */}
+                        {movingEvent && moveTargetDate === date && moveTargetMinute !== null && (() => {
+                          const ghostStartMinute = moveTargetMinute;
+                          const ghostHour = Math.floor(ghostStartMinute / 60);
+                          if (ghostHour !== hour) return null;
+                          const duration = toMinutes(movingEvent.endTime) - toMinutes(movingEvent.startTime);
+                          const ghostHeightPx = (duration / 60) * HOUR_HEIGHT;
+                          const ghostTopPx = ((ghostStartMinute % 60) / 60) * HOUR_HEIGHT;
+                          const es = EVENT_STYLES[movingEvent.color] || EVENT_STYLES.green;
+                          return (
+                            <div
+                              className="cal-event absolute left-1 right-1 z-30 pointer-events-none"
+                              style={{
+                                top: `${ghostTopPx}px`,
+                                height: `${Math.max(ghostHeightPx, 22)}px`,
+                                background: es.bg,
+                                borderLeftColor: es.border,
+                                opacity: 0.7,
+                              }}
+                            >
+                              <p className="text-[11px] font-medium truncate leading-tight" style={{ color: es.text }}>{movingEvent.title}</p>
+                              {ghostHeightPx > 34 && (
+                                <p className="text-[10px] truncate mt-px" style={{ color: es.text, opacity: 0.7 }}>
+                                  {formatTime(`${Math.floor(ghostStartMinute / 60).toString().padStart(2, "0")}:${(ghostStartMinute % 60).toString().padStart(2, "0")}`)} – {formatTime(`${Math.floor((ghostStartMinute + duration) / 60).toString().padStart(2, "0")}:${((ghostStartMinute + duration) % 60).toString().padStart(2, "0")}`)}
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })()}
+
+                        {/* Events — with overlap-aware positioning */}
                         {cellEvents.map((event) => {
                           const startH = parseInt(event.startTime.split(":")[0]);
                           const startM = parseInt(event.startTime.split(":")[1]);
@@ -358,14 +529,32 @@ export default function WeekCalendar({ events, onContextMenu, onAddEvent, onClic
                           const topPx = (startM / 60) * HOUR_HEIGHT;
                           const es = EVENT_STYLES[event.color] || EVENT_STYLES.green;
 
+                          const overlap = overlapLayout.get(event.id);
+                          const col = overlap?.column ?? 0;
+                          const totalCols = overlap?.totalColumns ?? 1;
+                          const PAD = 4; // px padding on each side
+                          const widthPct = 100 / totalCols;
+                          const leftPct = col * widthPct;
+
+                          const isBeingMoved = movingEvent?.id === event.id;
+
                           return (
                             <div
                               key={event.id}
-                              onClick={(e) => { e.stopPropagation(); onClickEvent(event, e.clientX, e.clientY); }}
+                              onClick={(e) => { e.stopPropagation(); if (!moveDidDrag) onClickEvent(event, e.clientX, e.clientY); }}
                               onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onContextMenu(event, e.clientX, e.clientY); }}
-                              onMouseDown={(e) => e.stopPropagation()}
-                              className="cal-event absolute left-1 right-1 z-10"
-                              style={{ top: `${topPx}px`, height: `${Math.max(heightPx, 22)}px`, background: es.bg, borderLeftColor: es.border }}
+                              onMouseDown={(e) => { if (e.button === 0) handleEventDragStart(event, e); }}
+                              className="cal-event absolute z-10"
+                              style={{
+                                top: `${topPx}px`,
+                                height: `${Math.max(heightPx, 22)}px`,
+                                left: `calc(${leftPct}% + ${PAD}px)`,
+                                width: `calc(${widthPct}% - ${PAD + 2}px)`,
+                                background: es.bg,
+                                borderLeftColor: es.border,
+                                opacity: isBeingMoved ? 0.4 : 1,
+                                cursor: "grab",
+                              }}
                             >
                               <p className="text-[11px] font-medium truncate leading-tight" style={{ color: es.text }}>{event.title}</p>
                               {heightPx > 34 && (

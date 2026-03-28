@@ -159,7 +159,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 OPENAI_API_KEY=
 ```
 
-Place in `Kronos/.env.local`. Never commit this file.
+Place in `Kronos/.env`. Never commit this file.
 
 ---
 
