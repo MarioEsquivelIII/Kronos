@@ -1,6 +1,6 @@
 # Noted
 
-**You mention it. Noted builds it.**
+**You name it. Noted builds it.**
 
 Noted is an AI-powered calendar companion: when you have an idea, you mention it to the chat — it hears you out, updates your calendar, and your answer is *Noted.* That’s the name.
 
