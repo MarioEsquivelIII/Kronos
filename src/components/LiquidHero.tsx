@@ -29,7 +29,7 @@ function GlassLogo() {
         bevelOffset={0}
         bevelSegments={5}
       >
-        Kronos
+        Noted
         <MeshTransmissionMaterial
           backside
           samples={16}

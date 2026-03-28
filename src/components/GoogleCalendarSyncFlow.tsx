@@ -366,7 +366,7 @@ export default function GoogleCalendarSyncFlow({
         {step === "strategy" && (
           <div className="p-6 space-y-4">
             <h3 className="text-sm font-semibold text-[#e8e8e8]">Import {fetched.length} event{fetched.length === 1 ? "" : "s"}</h3>
-            <p className="text-xs text-[#888]">How should Kronos combine these with your current schedule?</p>
+            <p className="text-xs text-[#888]">How should Noted combine these with your current schedule?</p>
             <div className="flex flex-col gap-2">
               <button
                 type="button"
@@ -374,7 +374,7 @@ export default function GoogleCalendarSyncFlow({
                 className="rounded-lg border border-[#5a8a4a] bg-[#1e2a1e] px-4 py-3 text-left text-sm text-[#e8e8e8] hover:bg-[#253525]"
               >
                 <span className="font-medium">Overwrite</span>
-                <span className="block text-xs text-[#888] mt-0.5">Replace all Kronos events with this import.</span>
+                <span className="block text-xs text-[#888] mt-0.5">Replace all Noted events with this import.</span>
               </button>
               <button
                 type="button"
@@ -401,14 +401,14 @@ export default function GoogleCalendarSyncFlow({
             <p className="text-xs text-[#888]">Each row overlaps in time on the same day. Choose what to keep.</p>
             <ul className="space-y-4">
               {conflictRows.map((row) => {
-                const k = row.kronos;
+                const k = row.noted;
                 const g = row.google;
                 const cur = resolutions[row.rowId];
                 return (
                   <li key={row.rowId} className="rounded-xl border border-[#333] bg-[#1a1a1a] p-3 space-y-2">
                     <div className="grid grid-cols-2 gap-2 text-[11px]">
                       <div>
-                        <p className="text-[#666] mb-1">Kronos</p>
+                        <p className="text-[#666] mb-1">Noted</p>
                         <p className="text-[#e8e8e8] font-medium">{k.title}</p>
                         <p className="text-[#888]">
                           {k.date}
@@ -427,7 +427,7 @@ export default function GoogleCalendarSyncFlow({
                     <div className="flex flex-wrap gap-1.5">
                       {(
                         [
-                          ["keep_kronos", "Keep Kronos"],
+                          ["keep_noted", "Keep Noted"],
                           ["use_google", "Use Google"],
                           ["keep_both", "Keep Both"],
                         ] as const

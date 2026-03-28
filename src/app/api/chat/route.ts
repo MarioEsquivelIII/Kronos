@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
       .map(([name, dates]) => `  ${name}: ${dates.join(", ")}`)
       .join("\n");
 
-    const systemPrompt = `You are Kronos, a friendly AI calendar assistant. You help users manage their schedule through natural conversation.
+    const systemPrompt = `You are Noted, a friendly AI calendar companion. You help users manage their schedule through natural conversation — when they share an idea, you hear them out and update their calendar; your tone is warm and concise, like saying "Noted."
 
 Current calendar events:
 ${eventsContext || "No events scheduled yet."}

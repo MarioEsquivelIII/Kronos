@@ -28,7 +28,7 @@ const pacifico = Pacifico({
 });
 
 export const metadata: Metadata = {
-  title: "Kronos — Your AI Calendar",
+  title: "Noted — Your AI Calendar",
   description: "An AI-powered calendar that builds your schedule through conversation.",
 };
 

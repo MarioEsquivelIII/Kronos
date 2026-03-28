@@ -37,7 +37,7 @@ export default function HomePage() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) {
-        const stored = localStorage.getItem("kronos_user");
+        const stored = localStorage.getItem("noted_user");
         if (stored) {
           const parsed = JSON.parse(stored);
           setDisplayName(parsed.name || parsed.email?.split("@")[0] || "User");
@@ -218,7 +218,7 @@ export default function HomePage() {
 
   const megaMenuContent: Record<string, { title: string; desc: string }[]> = {
     home: [
-      { title: "Getting Started", desc: "Learn how to describe your schedule and let Kronos build it." },
+      { title: "Getting Started", desc: "Learn how to describe your schedule and let Noted build it." },
       { title: "Photo-to-Calendar", desc: "Upload a photo and watch it become calendar events." },
       { title: "Voice Input", desc: "Speak your schedule hands-free with the mic button." },
       { title: "Google Calendar Sync", desc: "Import and merge events from your Google account." },
@@ -231,7 +231,7 @@ export default function HomePage() {
       <header className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-4xl">
         <nav className="rounded-full px-5 h-14 flex items-center justify-between bg-white/10 backdrop-blur-md border border-white/20 shadow-lg shadow-black/5">
           <div className="flex items-center gap-3">
-            <span className="font-logo text-xl" style={{ color: "var(--text-primary)" }}>Kronos</span>
+            <span className="font-logo text-xl" style={{ color: "var(--text-primary)" }}>Noted</span>
           </div>
 
           {/* View toggle — pill switcher with mega-menu */}
@@ -317,15 +317,15 @@ export default function HomePage() {
         </nav>
       </header>
 
-      {/* ========== HOME TAB — About Kronos ========== */}
+      {/* ========== HOME TAB — About Noted ========== */}
       {view === "home" && (
         <main className={`pt-24 pb-20 relative z-10 transition-all ${chatMode === "sidebar" ? "mr-100" : ""}`}>
           <div className="max-w-3xl mx-auto px-5 space-y-16">
             {/* Hero welcome */}
             <div className="text-center pt-8">
-              <span className="font-logo text-5xl md:text-6xl glass-text" style={{ color: "var(--accent)" }}>Kronos</span>
+              <span className="font-logo text-5xl md:text-6xl glass-text" style={{ color: "var(--accent)" }}>Noted</span>
               <p className="text-lg mt-4" style={{ color: "var(--text-secondary)" }}>
-                Your AI-powered calendar. Describe your schedule — Kronos builds it.
+                Your AI-powered calendar. Describe your schedule — Noted builds it.
               </p>
             </div>
 
@@ -335,8 +335,8 @@ export default function HomePage() {
               <div className="space-y-4">
                 {[
                   { num: "1", title: "Open the chat", desc: "Click the chat bar at the bottom and describe your ideal week in plain language." },
-                  { num: "2", title: "Watch it appear", desc: "Kronos creates your events instantly. Switch to the Calendar tab to see your schedule." },
-                  { num: "3", title: "Refine as you go", desc: "Ask Kronos to move, add, or remove events. Or drag and resize them directly on the calendar." },
+                  { num: "2", title: "Watch it appear", desc: "Noted creates your events instantly. Switch to the Calendar tab to see your schedule." },
+                  { num: "3", title: "Refine as you go", desc: "Ask Noted to move, add, or remove events. Or drag and resize them directly on the calendar." },
                 ].map((step) => (
                   <div key={step.num} className="flex gap-4 items-start">
                     <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold text-white flex-shrink-0" style={{ background: "var(--accent)" }}>
@@ -353,12 +353,12 @@ export default function HomePage() {
 
             {/* Features grid */}
             <div>
-              <h2 className="text-lg font-semibold mb-5" style={{ color: "var(--text-primary)" }}>What Kronos can do</h2>
+              <h2 className="text-lg font-semibold mb-5" style={{ color: "var(--text-primary)" }}>What Noted can do</h2>
               <div className="grid md:grid-cols-2 gap-4">
                 {[
                   {
                     title: "Natural language scheduling",
-                    desc: "Say \"gym every weekday at 6am\" or \"study 2 hours after dinner\" — Kronos figures out the rest.",
+                    desc: "Say \"gym every weekday at 6am\" or \"study 2 hours after dinner\" — Noted figures out the rest.",
                     icon: (
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
@@ -376,7 +376,7 @@ export default function HomePage() {
                   },
                   {
                     title: "Voice input",
-                    desc: "Tap the mic and speak. Kronos transcribes and processes your schedule hands-free.",
+                    desc: "Tap the mic and speak. Noted transcribes and processes your schedule hands-free.",
                     icon: (
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" /><path d="M19 10v2a7 7 0 01-14 0v-2" />
@@ -403,7 +403,7 @@ export default function HomePage() {
                   },
                   {
                     title: "Recurring events",
-                    desc: "\"Gym every weekday for 4 weeks\" — Kronos expands recurring requests into individual events.",
+                    desc: "\"Gym every weekday for 4 weeks\" — Noted expands recurring requests into individual events.",
                     icon: (
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" /><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
